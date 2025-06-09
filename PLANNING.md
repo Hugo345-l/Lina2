@@ -56,11 +56,20 @@ Para persistência de dados, adotamos SQLite com WAL (Write-Ahead Logging) mode 
 
 O sistema de threading será inspirado no modelo LangSmith, implementando camadas de curto prazo (checkpoints automáticos), semântica (armazenamento vetorial), episódica (sequências) e processual (prompts otimizados). Esta estrutura multi-camadas garante tanto performance quanto capacidade de aprendizado a longo prazo.
 
-### Interface: Agent Chat UI + LangServe
+### Interface: Agent Chat UI + LangServe (Evolução para Streamlit)
 
-Para interface do usuário, utilizaremos o Agent Chat UI oficial do LangChain, uma solução pronta que oferece interface de chat moderna com suporte nativo para chamadas de ferramentas, mensagens estruturadas, fluxos humano-no-loop, e integração completa com LangSmith para observabilidade. Esta escolha acelera significativamente o desenvolvimento, permitindo foco nas funcionalidades essenciais do sistema.
+**Planejamento Inicial:** Para interface do usuário, a intenção original era utilizar o Agent Chat UI oficial do LangChain. Esta solução oferecia uma interface de chat moderna com suporte nativo para chamadas de ferramentas, mensagens estruturadas, fluxos humano-no-loop, e integração com LangSmith. A expectativa era que essa escolha acelerasse o desenvolvimento.
 
-O backend será servido via LangServe, proporcionando APIs REST automáticas com esquemas inferidos, endpoints eficientes (/invoke, /batch, /stream), rastreamento integrado com LangSmith, e capacidade de servir múltiplas cadeias simultaneamente. A combinação Agent Chat UI + LangServe oferece caminho direto do desenvolvimento local para produção.
+**Mudança de Estratégia (06/09/2025):** Após tentativas de integração, encontramos complexidades significativas e dificuldades persistentes em estabelecer uma comunicação estável e correta entre o Agent Chat UI e o backend LangServe local. A depuração dos problemas de configuração de URL e comportamento do SDK do frontend consumiu um tempo considerável sem uma resolução clara e simples.
+
+Para priorizar a funcionalidade do backend e agilizar o desenvolvimento de uma interface funcional, decidimos **substituir o Agent Chat UI por uma interface mais simples e direta construída com Streamlit.** Esta abordagem permitirá:
+1.  Foco na lógica de interação com o backend LangServe, que já se provou robusto.
+2.  Maior controle sobre a construção e o fluxo da interface do usuário.
+3.  Desenvolvimento mais rápido de uma UI customizada para as necessidades da Lina.
+
+A nova UI Streamlit precisará ser desenvolvida e customizada para interagir com os endpoints `/chat/invoke` e `/chat/stream` do backend LangServe, replicando as funcionalidades de chat necessárias.
+
+O backend continuará sendo servido via LangServe, proporcionando APIs REST automáticas com esquemas inferidos, endpoints eficientes (/invoke, /batch, /stream), rastreamento integrado com LangSmith, e capacidade de servir múltiplas cadeias simultaneamente. A combinação de uma UI Streamlit customizada com o backend LangServe permitirá um desenvolvimento mais focado e adaptado ao projeto Lina.
 
 ### MCPs Iniciais
 
@@ -91,10 +100,10 @@ A estratégia de infraestrutura prioriza execução local para máxima privacida
 **Motivo**: Base técnica sólida é fundamental para produtividade. Configurar tudo corretamente desde o início evita problemas futuros e garante que todos os componentes funcionem harmoniosamente.
 **Entregável**: Ambiente de desenvolvimento totalmente configurado com hello-world LangGraph funcionando.
 
-#### Tarefa 1.2: Implementação do Agent Chat UI
-**Descrição**: Clone e configuração do Agent Chat UI oficial, customização básica para branding "Lina", integração com LangServe backend, e configuração de variáveis de ambiente para desenvolvimento local.
-**Motivo**: Interface de usuário é crucial para testes iniciais e feedback. Ter uma interface funcional rapidamente permite testar conceitos essenciais e coletar insights sobre experiência do usuário desde o início.
-**Entregável**: Interface de chat funcional rodando localmente, conectada a um agente básico LangGraph.
+#### Tarefa 1.2: Implementação da Interface de Chat com Streamlit
+**Descrição**: Desenvolvimento de uma interface de chat utilizando Streamlit. Isso inclui a criação dos componentes visuais, lógica para envio de mensagens ao backend LangServe (endpoints `/chat/invoke` e `/chat/stream`), exibição das respostas, e customização básica para o branding "Lina".
+**Motivo**: Após dificuldades com o Agent Chat UI, uma interface customizada com Streamlit oferecerá maior controle e simplicidade para alcançar uma UI funcional rapidamente, permitindo focar nos testes de interação com o backend.
+**Entregável**: Interface de chat funcional com Streamlit, rodando localmente e conectada ao backend LangServe.
 
 #### Tarefa 1.3: Backend LangServe Básico
 **Descrição**: Implementação de servidor LangServe básico servindo um agente LangGraph simples, configuração de endpoints essenciais (/invoke, /stream), e integração inicial com LangSmith para observabilidade.

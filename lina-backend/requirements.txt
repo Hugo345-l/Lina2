@@ -1,0 +1,9 @@
+langchain
+langchain-openai
+langserve
+fastapi
+uvicorn[standard]
+python-dotenv
+pydantic
+sse_starlette
+requests

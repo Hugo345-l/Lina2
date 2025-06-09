@@ -53,31 +53,30 @@
 
 ---
 
-### **Tarefa 1.2: Implementação do Agent Chat UI**
+### **Tarefa 1.2: Implementação da Interface de Chat (Streamlit)**
+
+**Decisão (06/09/2025):** Devido a complexidades e dificuldades persistentes na integração do Agent Chat UI oficial com o backend LangServe local, a estratégia para a interface do usuário foi alterada. Optou-se por desenvolver uma interface de chat mais simples e direta utilizando Streamlit. Esta abordagem visa acelerar o desenvolvimento de uma UI funcional e permitir maior controle sobre a interação com o backend.
 
 #### **Checklist Técnico**
-- [x] Clone do Agent Chat UI oficial
-  ```bash
-  git clone https://github.com/langchain-ai/agent-chat-ui
-  cd agent-chat-ui
-  npm install
-  ```
-- [x] Customização básica para "Lina"
-  - [ ] Logo/branding (Minimizado para protótipo)
-  - [ ] Cores e tema (Minimizado para protótipo)
-  - [x] Texto de boas-vindas (Título alterado para "Lina")
-- [x] Configuração de environment variables
-- [ ] Teste de conexão com backend (Pendente da Tarefa 1.3)
+- [ ] Instalar Streamlit (`pip install streamlit`)
+- [ ] Criar estrutura básica do app Streamlit (ex: `lina-streamlit-ui/app_st.py`)
+- [ ] Implementar lógica para entrada de texto do usuário.
+- [ ] Implementar função para enviar mensagem ao backend LangServe (`http://localhost:8000/chat/invoke` ou `/chat/stream`).
+    - [ ] Lidar com o formato de payload esperado pelo backend: `{"input": {"input": "SUA_MENSAGEM"}}`.
+- [ ] Implementar lógica para exibir a conversa (mensagens do usuário e respostas da Lina).
+- [ ] Customização básica da UI com o branding "Lina" (título, talvez um ícone simples).
+- [ ] Teste de conexão e funcionalidade completa com o backend.
 
 #### **Entregáveis**
-- [ ] Interface de chat funcional (Visualmente pronta, funcionalidade pendente do backend)
-- [x] Branding "Lina" aplicado (Título alterado)
-- [ ] Conexão com backend estabelecida (Pendente da Tarefa 1.3)
+- [ ] Aplicativo Streamlit funcional como interface de chat para a Lina.
+- [ ] Capacidade de enviar mensagens para o backend e exibir respostas (síncronas e/ou streaming).
+- [ ] Branding "Lina" minimamente aplicado na UI Streamlit.
 
 #### **Critérios de Sucesso**
-- Interface carrega sem erros - OK
-- Chat básico funcional - pendente backand
-- Visual personalizado para Lina - (Minimizado para protótipo)
+- Interface Streamlit carrega sem erros.
+- Usuário consegue enviar mensagens para o backend através da UI.
+- Respostas do backend são exibidas corretamente na UI.
+- Conexão frontend-backend estável e funcional.
 
 ---
 
@@ -102,14 +101,14 @@
 - [ ] Configuração CORS para frontend
 
 #### **Entregáveis**
-- ✅ Servidor LangServe funcional
-- ✅ Endpoints básicos operacionais
-- ✅ Logging e observabilidade
+- [x] Servidor LangServe funcional
+- [x] Endpoints básicos operacionais (`/health`, `/test`, `/chat/invoke`, `/chat/stream`, `/chat/playground`)
+- [x] Logging e observabilidade (Traces no LangSmith confirmados)
 
 #### **Testes**
-- [ ] Teste de endpoints via curl/postman
-- [ ] Verificação de logs LangSmith
-- [ ] Conexão frontend-backend
+- [x] Teste de endpoints via `test_backend.py` (substitui curl/postman para esta fase)
+- [x] Verificação de logs LangSmith (confirmado)
+- [ ] Conexão frontend-backend (Pendente da Tarefa 1.2, que agora pode ser testada)
 
 ---
 
