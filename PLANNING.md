@@ -94,6 +94,61 @@ O conjunto inicial de MCPs foi selecionado para cobrir casos de uso fundamentais
 
 A estratégia de infraestrutura prioriza execução local para máxima privacidade e controle, com backup na nuvem para continuidade. O desenvolvimento inicial ocorrerá inteiramente em ambiente local, com implantação futura em VPS básico ($15 mensais) quando necessário. Backup contínuo via Litestream para R2/S3 garante durabilidade dos dados com custo mínimo.
 
+### Histórico de Desafios e Aprendizados Recentes
+
+Recentemente, enfrentamos um desafio significativo com o backend LangServe que, embora inicialmente funcional, apresentou erros (principalmente o erro 422 Unprocessable Entity) após tentativas de refatoração e "melhoria". Este problema desencadeou uma série de outros erros, como instabilidade do servidor e falhas de conexão.
+
+**Principais Lições Aprendidas:**
+1.  **Complexidade Desnecessária:** Modificar código funcional sem um entendimento profundo de suas mecânicas pode introduzir instabilidade. A regra é: "Se funciona, primeiro entenda por que funciona, depois melhore incrementalmente."
+2.  **Convenções do Framework (LangServe):** Frameworks maduros como LangServe possuem convenções específicas (ex: formato de payload `{"input": {"input": "mensagem"}}`) que devem ser respeitadas. O playground (`/chat/playground/`) é uma ferramenta crucial para verificar os formatos esperados.
+3.  **Debugging em Cascata:** Corrigir um erro de forma apressada pode gerar novos erros. Ao encontrar um problema, é mais eficaz reverter para um estado funcional conhecido antes de tentar novas soluções.
+4.  **Simplicidade vs. Over-engineering:** Soluções complexas para problemas simples podem ser contraproducentes. A configuração original, mais simples, era a correta.
+5.  **Testes Incrementais:** Realizar uma mudança por vez e testar imediatamente é crucial para isolar problemas rapidamente.
+
+Esses aprendizados reforçam a importância de uma abordagem metódica e incremental no desenvolvimento, especialmente ao lidar com frameworks e suas particularidades.
+
+## Estado Atual e Próximos Passos (Fase 1 Revisada - 10/06/2025)
+
+Após um ciclo intensivo de desenvolvimento e depuração focado na **Tarefa 1.2 (Implementação da Interface de Chat com Streamlit)** e na **Tarefa 1.3 (Backend LangServe Básico)**, juntamente com o **Adendo à Fase 1 (Implementação de Respostas Estruturadas com Debug Info)**, alcançamos os seguintes marcos:
+
+**Avanços Concluídos:**
+1.  **Backend Funcional (`lina-backend/app.py`):**
+    *   Servidor LangServe está operacional e responde no endpoint `/chat/invoke`.
+    *   Implementada a lógica para retornar `ChatResponse` estruturado, contendo `output` (mensagem da Lina) e `debug_info` (custo, tokens, duração, nome do modelo).
+    *   Utiliza `model_dump()` para garantir que a resposta seja um dicionário JSON serializável, resolvendo problemas anteriores de serialização de objetos Pydantic.
+    *   Carrega configurações de preço de `config/pricing.json` para cálculo de custo.
+    *   Integração com LangSmith para observabilidade está configurada.
+2.  **Frontend Streamlit (`lina-streamlit-ui/app_st.py`):**
+    *   Interface de chat básica funcional, permitindo envio de mensagens e exibição do histórico.
+    *   Implementado um painel de debug que tenta exibir as informações de `debug_info` recebidas do backend.
+    *   Lógica de tratamento de payload e resposta no frontend foi iterativamente refinada para tentar acomodar a estrutura enviada pelo backend.
+
+**Principais Lições Aprendidas (reforçando e adicionando aos anteriores):**
+1.  **Serialização de Pydantic em LangServe:** A principal dificuldade encontrada foi garantir que o LangServe serializasse corretamente os objetos Pydantic (como `ChatResponse`) para JSON quando retornados por `RunnableLambda`. A solução definitiva foi usar `.model_dump()` no objeto Pydantic antes de retorná-lo da função wrapper, garantindo que um dicionário puro seja passado para o LangServe.
+2.  **Consistência de Payload Frontend-Backend:** A depuração do erro 422 (Unprocessable Entity) e do erro 500 (Internal Server Error) destacou a importância crítica de alinhar o formato do payload enviado pelo frontend com o que o backend (especificamente a configuração `add_routes` do LangServe e a assinatura da função no `RunnableLambda`) espera.
+3.  **Tratamento de Resposta no Frontend:** A forma como o frontend (Streamlit) recebe e parseia a resposta JSON do backend é crucial. Inicialmente, o frontend não estava interpretando corretamente o dicionário JSON que continha `output` e `debug_info`.
+4.  **Iteração e Testes:** A resolução dos problemas exigiu um processo iterativo de:
+    *   Modificar o backend.
+    *   Testar com `test_backend.py` (quando aplicável).
+    *   Testar a integração com o frontend Streamlit.
+    *   Analisar os erros (logs do servidor, mensagens de erro no frontend, comportamento da UI).
+    *   Refinar a lógica em ambos os lados.
+
+**Problema Pendente Principal:**
+*   **Formatação da Resposta no Frontend Streamlit:** Apesar dos avanços e do backend agora enviar um dicionário JSON correto (verificado pelos testes do `test_backend.py`), a interface Streamlit ainda exibe a resposta completa do backend (incluindo as chaves 'output' e 'debug_info') como uma string literal no balão de chat da Lina, em vez de apenas o texto da mensagem da Lina. Além disso, o painel de debug no Streamlit não está sendo populado corretamente com os dados de `debug_info`, indicando que a lógica de parsing no `lina-streamlit-ui/app_st.py` ainda não está extraindo e utilizando os dados como esperado. (Conforme imagem de 10/06/2025, 01:29 AM).
+
+**Próximos Passos Imediatos (dentro da Fase 1 Revisada):**
+1.  **Corrigir o Parsing da Resposta no Frontend (`lina-streamlit-ui/app_st.py`):**
+    *   Revisar e depurar a lógica no `app_st.py` que recebe `response.json()` do backend.
+    *   Garantir que, após `response_data_dict = response.json()`, o código extraia corretamente `response_data_dict['output']` para a mensagem da Lina e `response_data_dict['debug_info']` (que é um dicionário) para popular o `st.session_state.debug_info` com um objeto `DebugInfo`.
+    *   O objetivo é que o balão de chat da Lina mostre apenas o texto da mensagem e o painel de debug mostre os dados corretos.
+2.  **Validar o Funcionamento Completo do Fluxo:** Após a correção do frontend, realizar testes completos enviando mensagens pela interface Streamlit e verificando:
+    *   A mensagem da Lina é exibida corretamente.
+    *   O painel de debug é populado com os dados corretos de custo, tokens, duração e modelo.
+    *   Não há erros nos consoles do backend ou do frontend.
+
+Com a resolução deste problema de parsing no frontend, a funcionalidade principal da Fase 1 Revisada (MVP com interface de debug) estará concluída.
+
 ## Planejamento de Desenvolvimento
 
 ### Fase 1: Fundação e Interface
