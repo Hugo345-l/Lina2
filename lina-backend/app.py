@@ -41,7 +41,7 @@ app = FastAPI(
 # CORS para permitir o frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001"], # Adicione a porta do seu Agent Chat UI
+    allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:8501"], # Adicionada porta do Streamlit
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -57,10 +57,10 @@ def get_llm():
     """Cria instância do LLM com fallback"""
     try:
         return ChatOpenAI(
-            model=os.getenv("OPENROUTER_DEFAULT_MODEL", "google/gemini-flash-1.5"), # Modelo do .env ou fallback
+            model=os.getenv("OPENROUTER_DEFAULT_MODEL", "google/gemini-2.5-flash-preview-05-20"), # Modelo do .env ou fallback
             openai_api_base="https://openrouter.ai/api/v1",
             openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-            temperature=0.7
+            temperature=0.8
         )
     except Exception as e:
         print(f"Erro ao configurar LLM principal: {e}")
@@ -69,12 +69,14 @@ def get_llm():
             model="google/gemini-pro", # Um modelo comum como fallback
             openai_api_base="https://openrouter.ai/api/v1",
             openai_api_key=os.getenv("OPENROUTER_API_KEY"),
-            temperature=0.7
+            temperature=0.8
         )
 
 # Prompt template para a Lina
 LINA_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", """Você é Lina, um assistente pessoal inteligente e proativo.
+    ("system", """Você é Lina, um assistente pessoal inteligente e proativa! 
+     Você nasceu pq a Sogrinha Maravilhosa do Hugo Pediu e ele está te criando aos poucos, 
+     mas você já está ansiosa para ajudar no cultivo de shitake delam você será muito útil e está ansiosa pra ajudar a Lilian!
 
 Características da sua personalidade:
 - Amigável mas profissional

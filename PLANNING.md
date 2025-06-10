@@ -2,6 +2,8 @@
 
 ## Visão Geral do Projeto
 
+**Modelo LLM Padrão (via OpenRouter)**: `google/gemini-2.5-flash-preview-05-20` (Temperatura: 0.8)
+
 Lina é um assistente pessoal multi-agente concebido para ser uma ferramenta abrangente de apoio à vida cotidiana, inspirado no conceito do Jarvis do Homem de Ferro. O projeto visa criar um sistema inteligente capaz de gerenciar agendamentos, realizar pesquisas, auxiliar em compras, organizar tarefas, apoiar atividades profissionais e muito mais, tudo através de uma arquitetura distribuída e modular que combina autonomia inteligente com controle preciso.
 
 A filosofia por trás da Lina é transformar a interação com tecnologia de uma experiência reativa em uma colaboração proativa. Ao invés de simplesmente responder a comandos, Lina monitora contextos relevantes, antecipa necessidades, oferece insights úteis e executa tarefas complexas de forma autônoma, sempre mantendo o usuário informado e no controle das decisões importantes.
@@ -46,7 +48,10 @@ LangGraph oferece controle preciso sobre fluxos de trabalho complexos através d
 
 ### LLM: Gemini 2.5 Flash
 
-Escolhemos Gemini 2.5 Flash como modelo principal devido à sua combinação única de capacidade, custo-benefício e recursos multimodais. O modelo oferece janela de contexto ampla essencial para manter conversações longas e complexas, processamento multimodal nativo para futuras funcionalidades de visão computacional, e preços competitivos que se alinham com nosso orçamento de MVP de $50 mensais.
+**Modelo Padrão Atual (06/09/2025):** `google/gemini-2.5-flash-preview-05-20` com temperatura `0.8`.
+
+Originalmente, escolhemos Gemini 2.5 Flash (referindo-se a uma versão estável genérica) como modelo principal devido à sua combinação única de capacidade, custo-benefício e recursos multimodais. O modelo oferece janela de contexto ampla essencial para manter conversações longas e complexas, processamento multimodal nativo para futuras funcionalidades de visão computacional, e preços competitivos que se alinham com nosso orçamento de MVP de $50 mensais.
+A seleção do `google/gemini-2.5-flash-preview-05-20` como padrão específico visa utilizar a versão mais recente e otimizada disponível no OpenRouter no momento da configuração inicial, mantendo a temperatura em `0.8` para um equilíbrio entre criatividade e consistência.
 
 A integração nativa entre LangChain e Gemini através do langchain-google-genai garante acesso completo às capacidades avançadas do modelo, incluindo chamadas de função otimizadas e streaming eficiente. O custo operacional previsível permite implementar estratégias de cache e roteamento de modelo para maximizar performance dentro do orçamento estabelecido.
 
@@ -108,7 +113,7 @@ A estratégia de infraestrutura prioriza execução local para máxima privacida
 #### Tarefa 1.3: Backend LangServe Básico
 **Descrição**: Implementação de servidor LangServe básico servindo um agente LangGraph simples, configuração de endpoints essenciais (/invoke, /stream), e integração inicial com LangSmith para observabilidade.
 **Motivo**: Backend sólido é necessário para suportar interface. LangServe proporciona infraestrutura robusta que escala conforme projeto cresce.
-**Entregável**: Servidor LangServe funcional com agente básico, acessível via Agent Chat UI.
+**Entregável**: Servidor LangServe funcional com agente básico, acessível via interface Streamlit.
 
 #### Tarefa 1.4: Primeiro Agente "Lina-Front" Básico
 **Descrição**: Desenvolvimento do primeiro agente representando Lina-Front com personalidade básica definida, capacidades de conversação natural, acesso a ferramentas simples (busca web, calculadora), und respostas estruturadas.
