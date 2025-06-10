@@ -113,13 +113,60 @@
 
 ---
 
+### **Tarefa 1.3.2: Implementação de Respostas Estruturadas com Debug Info no Backend**
+
+**Objetivo**: Modificar o backend LangServe para que suas respostas de chat incluam informações de debug (custo, tokens, duração) para serem exibidas na interface Streamlit.
+
+#### **Checklist Técnico - Backend (`lina-backend/app.py`)**
+- [ ] Criar arquivo `pricing.json` com os custos por token dos modelos LLM utilizados via OpenRouter.
+- [ ] Definir modelos Pydantic:
+    - [ ] `ChatInput`: Para a entrada da API.
+    - [ ] `DebugInfo`: Para encapsular dados como `cost`, `tokens_used`, `prompt_tokens`, `completion_tokens`, `duration`, `model_name`.
+    - [ ] `ChatResponse`: Para a saída estruturada da API, contendo `output` (mensagem da Lina) e `debug_info`.
+- [ ] Modificar a chain principal do LangServe:
+    - [ ] Substituir o `StrOutputParser()` por um `RunnableLambda` (ex: `format_response_with_debug_info`).
+    - [ ] Na função do `RunnableLambda`:
+        - [ ] Extrair a mensagem de `AIMessage.content`.
+        - [ ] Extrair `token_usage` e `model_name` de `AIMessage.response_metadata`.
+        - [ ] Calcular `cost` utilizando os tokens, `model_name` e os dados do `pricing.json`.
+        - [ ] Retornar um dicionário com a mensagem e um `debug_info_partial` (contendo custo, tokens, modelo).
+- [ ] Implementar um wrapper para a API (ex: `lina_api_wrapper`):
+    - [ ] Medir o tempo de início e fim da execução da chain principal.
+    - [ ] Calcular a `duration` total.
+    - [ ] Construir o objeto `ChatResponse` final, combinando a saída da chain com a `duration` e outras informações necessárias para `DebugInfo`.
+- [ ] Atualizar `add_routes` no LangServe para usar o novo wrapper e os tipos `ChatInput`/`ChatResponse`.
+- [ ] Testar o endpoint `/chat/invoke` para verificar a nova estrutura de resposta.
+
+#### **Checklist Técnico - Frontend (`lina-streamlit-ui/app_st.py`)**
+- [ ] Ajustar a chamada ao backend para esperar e processar o novo formato `ChatResponse`.
+- [ ] No `st.session_state`, armazenar o objeto `debug_info` recebido.
+- [ ] Implementar o `render_debug_panel_simple` (ou similar) para exibir:
+    - [ ] Custo (`debug_info.cost`).
+    - [ ] Duração (`debug_info.duration`).
+    - [ ] Modelo Usado (`debug_info.model_name`).
+    - [ ] Tokens (`debug_info.tokens_used`, `debug_info.prompt_tokens`, `debug_info.completion_tokens`).
+    - [ ] (Opcional Fase 1) Placeholder para "Fluxo de Processamento" que inicialmente mostrará um passo único.
+- [ ] Implementar polling inteligente para atualizar o debug panel (se aplicável para dados que mudam sem nova interação de chat).
+
+#### **Entregáveis**
+- [ ] Backend LangServe retornando `ChatResponse` com `debug_info` populado (custo, tokens, duração, modelo).
+- [ ] Interface Streamlit exibindo as métricas do `debug_info` em um painel de debug básico.
+- [ ] Arquivo `pricing.json` criado e utilizado pelo backend.
+
+#### **Critérios de Sucesso**
+- Endpoint `/chat/invoke` retorna a estrutura `ChatResponse` corretamente.
+- Interface Streamlit exibe custo, tokens, duração e modelo após cada interação.
+- Cálculo de custo básico implementado e refletido.
+
+---
+
 ### **Tarefa 1.4: Primeiro Agente "Lina-Front" Básico**
 
 #### **Checklist Técnico**
 - [ ] Definição da personalidade base
   ```python
   LINA_PERSONALITY = """
-  Você é Lina, um assistente pessoal inteligente e proativo.
+  Você é Lina, um assistente pessoal inteligente e proativa.
   Características:
   - Amigável mas profissional
   - Proativa em sugerir melhorias
@@ -133,7 +180,7 @@
   
   # Model routing inteligente por task
   llm_conversational = ChatOpenAI(
-      model="google/gemini-2.0-flash-exp",  # Para conversação
+      model="google/gemini-2.5-flash-preview-05-20",  # Para conversação
       openai_api_base="https://openrouter.ai/api/v1"
   )
   

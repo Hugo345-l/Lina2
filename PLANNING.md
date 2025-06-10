@@ -115,6 +115,19 @@ A estratégia de infraestrutura prioriza execução local para máxima privacida
 **Motivo**: Backend sólido é necessário para suportar interface. LangServe proporciona infraestrutura robusta que escala conforme projeto cresce.
 **Entregável**: Servidor LangServe funcional com agente básico, acessível via interface Streamlit.
 
+#### Adendo à Fase 1: Implementação de Respostas Estruturadas com Debug Info
+
+**Conceito e Objetivos:**
+Para que a interface de chat Streamlit (desenvolvida na Tarefa 1.2) sirva efetivamente como uma ferramenta de teste e debug para a Lina, é crucial que o backend não retorne apenas a mensagem do assistente, mas também informações contextuais sobre a execução daquela interação. Esta sub-fase foca em enriquecer as respostas da API do backend com `debug_info` essencial.
+
+**Objetivos Principais:**
+*   **Observabilidade na Interface:** Permitir que o desenvolvedor (Hugo) visualize diretamente na UI de teste métricas como custo estimado da chamada LLM, tokens utilizados e duração da resposta do backend.
+*   **Validação da Coleta de Métricas:** Estabelecer o mecanismo pelo qual o backend coleta ou calcula essas métricas, utilizando primariamente informações já disponíveis através do LangChain e LangSmith.
+*   **Fundação para Debug Avançado:** Preparar a estrutura de resposta para futuramente incluir informações mais detalhadas, como o fluxo de execução entre múltiplos agentes (`flow_steps`), quando a arquitetura evoluir para LangGraph.
+*   **Simplicidade e Clareza:** Implementar essa funcionalidade de forma direta, aproveitando os recursos existentes do LangChain para extração de metadados da execução, sem introduzir complexidade desnecessária de cálculo de custos nesta fase inicial (foco em exibir o que o LangSmith/LangChain já oferece).
+
+Esta abordagem garante que, desde cedo, tenhamos uma interface que não só permite interagir com a Lina, mas também entender melhor o que acontece "por baixo dos panos" de forma imediata e acessível.
+
 #### Tarefa 1.4: Primeiro Agente "Lina-Front" Básico
 **Descrição**: Desenvolvimento do primeiro agente representando Lina-Front com personalidade básica definida, capacidades de conversação natural, acesso a ferramentas simples (busca web, calculadora), und respostas estruturadas.
 **Motivo**: Ter uma versão inicial da "personalidade" Lina permite teste de conceitos essenciais e refinamento da experiência conversacional. É o primeiro passo para validar a viabilidade da abordagem.
