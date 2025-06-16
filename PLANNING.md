@@ -61,20 +61,57 @@ Para persistência de dados, adotamos SQLite com WAL (Write-Ahead Logging) mode 
 
 O sistema de threading será inspirado no modelo LangSmith, implementando camadas de curto prazo (checkpoints automáticos), semântica (armazenamento vetorial), episódica (sequências) e processual (prompts otimizados). Esta estrutura multi-camadas garante tanto performance quanto capacidade de aprendizado a longo prazo.
 
-### Interface: Agent Chat UI + LangServe (Evolução para Streamlit)
+### Interface: Evolução Completa - De Agent Chat UI → Streamlit → HTML+CSS+JavaScript
 
-**Planejamento Inicial:** Para interface do usuário, a intenção original era utilizar o Agent Chat UI oficial do LangChain. Esta solução oferecia uma interface de chat moderna com suporte nativo para chamadas de ferramentas, mensagens estruturadas, fluxos humano-no-loop, e integração com LangSmith. A expectativa era que essa escolha acelerasse o desenvolvimento.
+**Trajetória de Decisões e Lições Aprendidas:**
 
-**Mudança de Estratégia (06/09/2025):** Após tentativas de integração, encontramos complexidades significativas e dificuldades persistentes em estabelecer uma comunicação estável e correta entre o Agent Chat UI e o backend LangServe local. A depuração dos problemas de configuração de URL e comportamento do SDK do frontend consumiu um tempo considerável sem uma resolução clara e simples.
+#### **Planejamento Inicial: Agent Chat UI**
+Para interface do usuário, a intenção original era utilizar o Agent Chat UI oficial do LangChain. Esta solução oferecia uma interface de chat moderna com suporte nativo para chamadas de ferramentas, mensagens estruturadas, fluxos humano-no-loop, e integração com LangSmith. A expectativa era que essa escolha acelerasse o desenvolvimento.
 
-Para priorizar a funcionalidade do backend e agilizar o desenvolvimento de uma interface funcional, decidimos **substituir o Agent Chat UI por uma interface mais simples e direta construída com Streamlit.** Esta abordagem permitirá:
-1.  Foco na lógica de interação com o backend LangServe, que já se provou robusto.
-2.  Maior controle sobre a construção e o fluxo da interface do usuário.
-3.  Desenvolvimento mais rápido de uma UI customizada para as necessidades da Lina.
+#### **Decisão Intermediária: Streamlit (10/06/2025)**
+Enfrentamos dificuldades significativas com o Agent Chat UI, levando à migração para Streamlit como solução temporária. Embora funcional para prototipagem rápida, descobrimos limitações importantes:
+- **Controle limitado sobre UI/UX**: Difícil customização do layout e estilo
+- **Performance issues**: Rerenderização completa da página a cada interação
+- **Debugging complexo**: Problemas com parsing de resposta JSON do backend
+- **Experiência de usuário subótima**: Não adequada para uso prolongado
 
-A nova UI Streamlit precisará ser desenvolvida e customizada para interagir com os endpoints `/chat/invoke` e `/chat/stream` do backend LangServe, replicando as funcionalidades de chat necessárias.
+#### **Decisão Final: HTML+CSS+JavaScript Puro (16/06/2025) ✅**
+Baseado no feedback do usuário e análise das necessidades do projeto, migramos para uma interface web nativa inspirada no design do Toqan. Esta decisão provou ser **absolutamente correta** pelos seguintes motivos:
 
-O backend continuará sendo servido via LangServe, proporcionando APIs REST automáticas com esquemas inferidos, endpoints eficientes (/invoke, /batch, /stream), rastreamento integrado com LangSmith, e capacidade de servir múltiplas cadeias simultaneamente. A combinação de uma UI Streamlit customizada com o backend LangServe permitirá um desenvolvimento mais focado e adaptado ao projeto Lina.
+**Vantagens Técnicas:**
+- **Controle total**: Customização completa de layout, estilo e comportamento
+- **Performance superior**: Renderização eficiente sem overhead de framework
+- **Debug transparente**: Logs detalhados no console do navegador
+- **Integração nativa**: Comunicação direta com LangServe via Fetch API
+
+**Vantagens de UX:**
+- **Interface profissional**: Design system moderno inspirado no Tailwind UI
+- **Debug panel integrado**: Métricas em tempo real visíveis e funcionais
+- **Responsividade**: Funciona perfeitamente em desktop e mobile
+- **Experiência fluida**: Sem recarregamentos de página, interações instantâneas
+
+**Lições Aprendidas Críticas:**
+
+1. **Simplicidade vence complexidade**: Frameworks podem adicionar overhead desnecessário para casos específicos
+2. **Controle é fundamental**: Para um assistente AI, controle total sobre a UI é essencial
+3. **Performance importa**: Interfaces lentas quebram a ilusão de assistente inteligente
+4. **Debug visual é crucial**: Ver métricas em tempo real ajuda enormemente no desenvolvimento
+5. **Inspiração externa funciona**: O design do Toqan foi perfeito como referência
+
+**Estrutura Final Implementada:**
+```
+lina-frontend/
+├── index.html              ✅ Interface principal responsiva
+├── css/
+│   ├── main.css           ✅ Design system completo
+│   ├── chat.css           ✅ Interface de conversação
+│   └── debug-panel.css    ✅ Painel de métricas
+└── js/
+    ├── app.js             ✅ Orquestração principal
+    ├── chat.js            ✅ Lógica do chat
+    ├── debug-panel.js     ✅ Painel de debug
+    └── api.js             ✅ Cliente HTTP robusto
+```
 
 ### MCPs Iniciais
 
@@ -107,47 +144,21 @@ Recentemente, enfrentamos um desafio significativo com o backend LangServe que, 
 
 Esses aprendizados reforçam a importância de uma abordagem metódica e incremental no desenvolvimento, especialmente ao lidar com frameworks e suas particularidades.
 
-## Estado Atual e Próximos Passos (Fase 1 Revisada - 10/06/2025)
-
-Após um ciclo intensivo de desenvolvimento e depuração focado na **Tarefa 1.2 (Implementação da Interface de Chat com Streamlit)** e na **Tarefa 1.3 (Backend LangServe Básico)**, juntamente com o **Adendo à Fase 1 (Implementação de Respostas Estruturadas com Debug Info)**, alcançamos os seguintes marcos:
-
-**Avanços Concluídos:**
+**Avanços Concluídos (16/06/2025):**
 1.  **Backend Funcional (`lina-backend/app.py`):**
     *   Servidor LangServe está operacional e responde no endpoint `/chat/invoke`.
     *   Implementada a lógica para retornar `ChatResponse` estruturado, contendo `output` (mensagem da Lina) e `debug_info` (custo, tokens, duração, nome do modelo).
-    *   Utiliza `model_dump()` para garantir que a resposta seja um dicionário JSON serializável, resolvendo problemas anteriores de serialização de objetos Pydantic.
+    *   Utiliza `model_dump()` para garantir que a resposta seja um dicionário JSON serializável.
     *   Carrega configurações de preço de `config/pricing.json` para cálculo de custo.
     *   Integração com LangSmith para observabilidade está configurada.
-2.  **Frontend Streamlit (`lina-streamlit-ui/app_st.py`):**
-    *   Interface de chat básica funcional, permitindo envio de mensagens e exibição do histórico.
-    *   Implementado um painel de debug que tenta exibir as informações de `debug_info` recebidas do backend.
-    *   Lógica de tratamento de payload e resposta no frontend foi iterativamente refinada para tentar acomodar a estrutura enviada pelo backend.
-
-**Principais Lições Aprendidas (reforçando e adicionando aos anteriores):**
-1.  **Serialização de Pydantic em LangServe:** A principal dificuldade encontrada foi garantir que o LangServe serializasse corretamente os objetos Pydantic (como `ChatResponse`) para JSON quando retornados por `RunnableLambda`. A solução definitiva foi usar `.model_dump()` no objeto Pydantic antes de retorná-lo da função wrapper, garantindo que um dicionário puro seja passado para o LangServe.
-2.  **Consistência de Payload Frontend-Backend:** A depuração do erro 422 (Unprocessable Entity) e do erro 500 (Internal Server Error) destacou a importância crítica de alinhar o formato do payload enviado pelo frontend com o que o backend (especificamente a configuração `add_routes` do LangServe e a assinatura da função no `RunnableLambda`) espera.
-3.  **Tratamento de Resposta no Frontend:** A forma como o frontend (Streamlit) recebe e parseia a resposta JSON do backend é crucial. Inicialmente, o frontend não estava interpretando corretamente o dicionário JSON que continha `output` e `debug_info`.
-4.  **Iteração e Testes:** A resolução dos problemas exigiu um processo iterativo de:
-    *   Modificar o backend.
-    *   Testar com `test_backend.py` (quando aplicável).
-    *   Testar a integração com o frontend Streamlit.
-    *   Analisar os erros (logs do servidor, mensagens de erro no frontend, comportamento da UI).
-    *   Refinar a lógica em ambos os lados.
-
-**Problema Pendente Principal:**
-*   **Formatação da Resposta no Frontend Streamlit:** Apesar dos avanços e do backend agora enviar um dicionário JSON correto (verificado pelos testes do `test_backend.py`), a interface Streamlit ainda exibe a resposta completa do backend (incluindo as chaves 'output' e 'debug_info') como uma string literal no balão de chat da Lina, em vez de apenas o texto da mensagem da Lina. Além disso, o painel de debug no Streamlit não está sendo populado corretamente com os dados de `debug_info`, indicando que a lógica de parsing no `lina-streamlit-ui/app_st.py` ainda não está extraindo e utilizando os dados como esperado. (Conforme imagem de 10/06/2025, 01:29 AM).
-
-**Próximos Passos Imediatos (dentro da Fase 1 Revisada):**
-1.  **Corrigir o Parsing da Resposta no Frontend (`lina-streamlit-ui/app_st.py`):**
-    *   Revisar e depurar a lógica no `app_st.py` que recebe `response.json()` do backend.
-    *   Garantir que, após `response_data_dict = response.json()`, o código extraia corretamente `response_data_dict['output']` para a mensagem da Lina e `response_data_dict['debug_info']` (que é um dicionário) para popular o `st.session_state.debug_info` com um objeto `DebugInfo`.
-    *   O objetivo é que o balão de chat da Lina mostre apenas o texto da mensagem e o painel de debug mostre os dados corretos.
-2.  **Validar o Funcionamento Completo do Fluxo:** Após a correção do frontend, realizar testes completos enviando mensagens pela interface Streamlit e verificando:
-    *   A mensagem da Lina é exibida corretamente.
-    *   O painel de debug é populado com os dados corretos de custo, tokens, duração e modelo.
-    *   Não há erros nos consoles do backend ou do frontend.
-
-Com a resolução deste problema de parsing no frontend, a funcionalidade principal da Fase 1 Revisada (MVP com interface de debug) estará concluída.
+    *   Configuração CORS adequada para frontend web.
+2.  **Frontend Web (`lina-frontend/`):**
+    *   Interface moderna HTML/CSS/JavaScript inspirada no design do Toqan.
+    *   Chat operacional com histórico de mensagens e entrada responsiva.
+    *   Debug panel integrado exibindo métricas em tempo real (custo, tokens, duração, modelo).
+    *   API client robusto com comunicação estável com o backend LangServe.
+    *   Design system completo com cores customizáveis e layout responsivo.
+    *   Documentação completa da estrutura frontend (`FRONTEND_MAP.md`).
 
 ## Planejamento de Desenvolvimento
 
@@ -160,28 +171,111 @@ Com a resolução deste problema de parsing no frontend, a funcionalidade princi
 **Motivo**: Base técnica sólida é fundamental para produtividade. Configurar tudo corretamente desde o início evita problemas futuros e garante que todos os componentes funcionem harmoniosamente.
 **Entregável**: Ambiente de desenvolvimento totalmente configurado com hello-world LangGraph funcionando.
 
-#### Tarefa 1.2: Implementação da Interface de Chat com Streamlit
-**Descrição**: Desenvolvimento de uma interface de chat utilizando Streamlit. Isso inclui a criação dos componentes visuais, lógica para envio de mensagens ao backend LangServe (endpoints `/chat/invoke` e `/chat/stream`), exibição das respostas, e customização básica para o branding "Lina".
-**Motivo**: Após dificuldades com o Agent Chat UI, uma interface customizada com Streamlit oferecerá maior controle e simplicidade para alcançar uma UI funcional rapidamente, permitindo focar nos testes de interação com o backend.
-**Entregável**: Interface de chat funcional com Streamlit, rodando localmente e conectada ao backend LangServe.
+#### Tarefa 1.2: Implementação da Interface Chat + Debug Panel
+**Descrição**: Desenvolvimento de uma interface web moderna utilizando HTML + CSS + JavaScript, inspirada no design do Toqan. A interface consistirá em:
 
-#### Tarefa 1.3: Backend LangServe Básico
-**Descrição**: Implementação de servidor LangServe básico servindo um agente LangGraph simples, configuração de endpoints essenciais (/invoke, /stream), e integração inicial com LangSmith para observabilidade.
+Chat Principal (esquerda): Interface limpa para conversação com a Lina
+Debug Panel (direita, colapsível): Painel transparente mostrando métricas de execução, custos, tokens e informações técnicas
+Integração com endpoints LangServe (/chat/invoke e /chat/stream)
+Branding visual da "Lina" e experiência de usuário polida
+
+**Motivo**: A interface inspirada no Toqan oferece a combinação perfeita de usabilidade para conversação e transparência operacional para desenvolvimento. Permite validar tanto a experiência do usuário quanto o funcionamento técnico do sistema, essencial para uma arquitetura multi-agente complexa como a da Lina.
+Tecnologias: HTML5 + CSS3 (Grid/Flexbox) + JavaScript ES6+ (Fetch API, WebSockets futuro)
+Estrutura de Arquivos:
+lina-frontend/
+├── index.html              # Página principal
+├── css/
+│   ├── main.css           # Estilos principais e layout
+│   ├── chat.css           # Estilos específicos do chat
+│   └── debug-panel.css    # Estilos do painel de debug
+├── js/
+│   ├── app.js             # Aplicação principal e orquestração
+│   ├── chat.js            # Lógica da interface de chat
+│   ├── debug-panel.js     # Lógica do painel de debug
+│   └── api.js             # Comunicação com backend LangServe
+└── assets/
+    └── lina-logo.svg      # Logo da Lina
+Layout Visual da Interface:
+┌─────────────────────────────────────────┬─────────────────┐
+│  LINA CHAT                              │  🔍 DEBUG       │
+│                                         │  ┌─────────────┐ │
+│  💬 Usuário: "Oi Lina!"                │  │ ⏱️ 1.2s     │ │
+│  🤖 Lina: "Oi! Como posso ajudar?"     │  │ 💰 $0.001   │ │
+│                                         │  │ 🎯 50 tokens│ │
+│  💬 Usuário: "Agenda reunião..."       │  │ 🤖 gemini   │ │
+│  🤖 Lina: "Verificando agenda..."      │  │ └─────────────┘ │
+│                                         │                 │
+│  ┌─────────────────────────────────┐   │  📊 SESSION     │
+│  │ [Digite sua mensagem...]        │   │  Total: $0.05   │
+│  └─────────────────────────────────┘   │  Msgs: 12       │
+└─────────────────────────────────────────┴─────────────────┘
+Funcionalidades Core:
+
+Chat Interface: Input responsivo, histórico de mensagens, indicadores de status
+Debug Panel: Métricas em tempo real (custo, tokens, duração, modelo utilizado)
+Session Tracking: Custo acumulado, contador de mensagens, histórico de performance
+Responsive Design: Funcional em desktop e mobile
+Real-time Updates: Preparado para streaming futuro
+
+**Entregável**: Interface web completa e funcional, conectada ao backend LangServe, com chat operacional e debug panel transparente mostrando todas as métricas de execução.
+
+#### Tarefa 1.3: Backend LangServe Básico ✅ CONCLUÍDA
+Status: ✅ Implementada e funcionando
+Descrição: Implementação de servidor LangServe básico servindo um agente LangGraph simples, configuração de endpoints essenciais (/invoke, /stream), e integração inicial com LangSmith para observabilidade.
+Achievements:
+
+✅ Servidor LangServe funcional rodando na porta 8000
+✅ Endpoints operacionais: /health, /test, /chat/invoke, /chat/playground
+✅ Respostas estruturadas com separação clara: output + debug_info
+✅ Métricas completas: custo, tokens (prompt/completion), duração, modelo
+✅ CORS configurado para frontend
+✅ LangSmith tracing integrado
+✅ Fallback de modelos implementado
+✅ Tratamento de erros robusto
+
+Por que o Backend Atual FUNCIONA para Nossa Arquitetura:
+1. Estrutura de Resposta Perfeita para Debug Panel:
+
+O backend já retorna output + debug_info separados - exatamente o que precisamos
+Debug info inclui todas as métricas essenciais: custo, tokens, duração, modelo
+Estrutura permite expansão futura sem breaking changes
+
+2. Preparação Natural para Multi-Agente:
+
+LangServe + LangSmith já trackeiam execução de chains complexas
+Quando evoluirmos para LangGraph multi-instância, o debug_info pode incluir:
+
+agent_flow: ["lina-front", "lina-memory", "lina-tools"]
+mcp_calls: [{"gmail": "send_email"}, {"calendar": "create_event"}]
+handoff_times: {"front->memory": 0.1s, "memory->tools": 0.2s}
+
+3. Compatibilidade com Interface Toqan-style:
+
+Response estruturada permite popular tanto chat quanto debug panel
+Métricas em tempo real já calculadas no backend
+CORS e endpoints prontos para JavaScript fetch()
+
+4. Fundação Sólida para Evolução:
+
+Base LangServe escala naturalmente para workflows complexos
+LangSmith observability já integrada
+Estrutura de custos permite controle de budget desde o MVP
+
+Backend Atual:
+python# Resposta estruturada:
+{
+  "output": "Resposta da Lina aqui",           # Apenas conteúdo da mensagem
+  "debug_info": {                              # Métricas separadas
+    "cost": 0.002,
+    "tokens_used": 50,
+    "prompt_tokens": 35,
+    "completion_tokens": 15,
+    "duration": 1.2,
+    "model_name": "gemini-2.5-flash"
+  }
+}
 **Motivo**: Backend sólido é necessário para suportar interface. LangServe proporciona infraestrutura robusta que escala conforme projeto cresce.
-**Entregável**: Servidor LangServe funcional com agente básico, acessível via interface Streamlit.
-
-#### Adendo à Fase 1: Implementação de Respostas Estruturadas com Debug Info
-
-**Conceito e Objetivos:**
-Para que a interface de chat Streamlit (desenvolvida na Tarefa 1.2) sirva efetivamente como uma ferramenta de teste e debug para a Lina, é crucial que o backend não retorne apenas a mensagem do assistente, mas também informações contextuais sobre a execução daquela interação. Esta sub-fase foca em enriquecer as respostas da API do backend com `debug_info` essencial.
-
-**Objetivos Principais:**
-*   **Observabilidade na Interface:** Permitir que o desenvolvedor (Hugo) visualize diretamente na UI de teste métricas como custo estimado da chamada LLM, tokens utilizados e duração da resposta do backend.
-*   **Validação da Coleta de Métricas:** Estabelecer o mecanismo pelo qual o backend coleta ou calcula essas métricas, utilizando primariamente informações já disponíveis através do LangChain e LangSmith.
-*   **Fundação para Debug Avançado:** Preparar a estrutura de resposta para futuramente incluir informações mais detalhadas, como o fluxo de execução entre múltiplos agentes (`flow_steps`), quando a arquitetura evoluir para LangGraph.
-*   **Simplicidade e Clareza:** Implementar essa funcionalidade de forma direta, aproveitando os recursos existentes do LangChain para extração de metadados da execução, sem introduzir complexidade desnecessária de cálculo de custos nesta fase inicial (foco em exibir o que o LangSmith/LangChain já oferece).
-
-Esta abordagem garante que, desde cedo, tenhamos uma interface que não só permite interagir com a Lina, mas também entender melhor o que acontece "por baixo dos panos" de forma imediata e acessível.
+Entregável: ✅ Servidor LangServe funcional com agente básico, pronto para integração com nova interface web.
 
 #### Tarefa 1.4: Primeiro Agente "Lina-Front" Básico
 **Descrição**: Desenvolvimento do primeiro agente representando Lina-Front com personalidade básica definida, capacidades de conversação natural, acesso a ferramentas simples (busca web, calculadora), und respostas estruturadas.

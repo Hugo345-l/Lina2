@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lina - Assistente Pessoal</title>
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/chat.css">
+    <link rel="stylesheet" href="css/debug-panel.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Chat Principal -->
+        <main class="chat-container">
+            <header class="chat-header">
+                <div class="chat-title">
+                    <img src="assets/lina-logo.svg" alt="Lina" class="logo" onerror="this.style.display='none'">
+                    <h1>Lina</h1>
+                    <span class="chat-subtitle">Assistente Pessoal</span>
+                </div>
+                <div class="chat-status">
+                    <span class="status-indicator" id="connectionStatus">●</span>
+                    <span class="status-text">Conectada</span>
+                </div>
+            </header>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system-message">
+                    <div class="message-content">
+                        <p>👋 Olá! Eu sou a Lina, sua assistente pessoal. Como posso ajudar você hoje?</p>
+                    </div>
+                    <div class="message-time">Agora</div>
+                </div>
+            </div>
+
+            <form class="chat-input-form" id="chatForm">
+                <div class="input-container">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Digite sua mensagem..." 
+                        autocomplete="off"
+                        required
+                    >
+                    <button type="submit" id="sendButton" class="send-button">
+                        <span class="send-icon">→</span>
+                    </button>
+                </div>
+                <div class="input-hint">
+                    Pressione Enter para enviar ou use o botão →
+                </div>
+            </form>
+        </main>
+
+        <!-- Debug Panel -->
+        <aside class="debug-panel" id="debugPanel">
+            <header class="debug-header">
+                <h2>🔍 Debug</h2>
+                <button class="toggle-panel" id="toggleDebug" title="Mostrar/Ocultar Debug">
+                    <span>◀</span>
+                </button>
+            </header>
+
+            <div class="debug-content">
+                <!-- Métricas da Última Interação -->
+                <section class="debug-section">
+                    <h3>⚡ Última Interação</h3>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="metric-label">⏱️ Tempo</span>
+                            <span class="metric-value" id="lastDuration">-</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">💰 Custo</span>
+                            <span class="metric-value" id="lastCost">-</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">🎯 Tokens</span>
+                            <span class="metric-value" id="lastTokens">-</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">🤖 Modelo</span>
+                            <span class="metric-value" id="lastModel">-</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Métricas da Sessão -->
+                <section class="debug-section">
+                    <h3>📊 Sessão</h3>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="metric-label">💵 Total</span>
+                            <span class="metric-value" id="sessionCost">$0.000</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">💬 Mensagens</span>
+                            <span class="metric-value" id="sessionMessages">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">🔥 Tokens</span>
+                            <span class="metric-value" id="sessionTokens">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">⏰ Tempo</span>
+                            <span class="metric-value" id="sessionTime">0s</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Status do Sistema -->
+                <section class="debug-section">
+                    <h3>🖥️ Sistema</h3>
+                    <div class="system-status">
+                        <div class="status-item">
+                            <span class="status-label">Backend:</span>
+                            <span class="status-value" id="backendStatus">Verificando...</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">API:</span>
+                            <span class="status-value" id="apiStatus">Standby</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <p>Lina está pensando...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/debug-panel.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

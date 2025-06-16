@@ -1,0 +1,324 @@
+/* === Debug Panel === */
+.debug-panel {
+    background-color: var(--surface-color);
+    border-left: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all var(--transition-normal);
+}
+
+.debug-panel.collapsed {
+    width: 48px;
+}
+
+.debug-panel.collapsed .debug-content {
+    display: none;
+}
+
+.debug-panel.collapsed .debug-header h2 {
+    display: none;
+}
+
+/* === Debug Header === */
+.debug-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-lg) var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--background-color);
+    min-height: 80px;
+}
+
+.debug-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.toggle-panel {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-size: 12px;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-panel:hover {
+    background-color: var(--text-primary);
+}
+
+.toggle-panel span {
+    transition: transform var(--transition-fast);
+}
+
+.debug-panel.collapsed .toggle-panel span {
+    transform: rotate(180deg);
+}
+
+/* === Debug Content === */
+.debug-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.debug-section {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-md);
+}
+
+.debug-section h3 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 var(--spacing-md) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+/* === Metric Grid === */
+.metric-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-sm);
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm);
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    transition: all var(--transition-fast);
+}
+
+.metric:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.metric-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.metric-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+/* === System Status === */
+.system-status {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 12px;
+}
+
+.status-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.status-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+.status-value.success {
+    color: var(--success-color);
+}
+
+.status-value.error {
+    color: var(--error-color);
+}
+
+.status-value.warning {
+    color: var(--warning-color);
+}
+
+/* === Valor Especiais === */
+.metric-value.cost {
+    color: var(--success-color);
+}
+
+.metric-value.tokens {
+    color: var(--primary-color);
+}
+
+.metric-value.duration {
+    color: var(--warning-color);
+}
+
+.metric-value.model {
+    color: var(--secondary-color);
+    font-size: 12px;
+    word-break: break-all;
+}
+
+/* === Animações === */
+.metric-value.updating {
+    animation: pulse 0.5s ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* === Estado de Loading === */
+.debug-content.loading {
+    opacity: 0.6;
+}
+
+.debug-content.loading .metric-value {
+    color: var(--text-muted);
+}
+
+/* === Responsividade === */
+@media (max-width: 768px) {
+    .debug-panel {
+        width: var(--debug-panel-width) !important;
+        border-left: none;
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .debug-header {
+        padding: var(--spacing-md);
+    }
+    
+    .metric-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .debug-panel {
+        width: 280px !important;
+    }
+    
+    .debug-content {
+        padding: var(--spacing-sm);
+    }
+    
+    .debug-section {
+        padding: var(--spacing-sm);
+    }
+    
+    .metric {
+        padding: var(--spacing-xs);
+    }
+}
+
+/* === Estados do Debug Panel === */
+.debug-panel.hidden {
+    display: none;
+}
+
+.debug-panel.minimized {
+    height: 80px;
+    overflow: hidden;
+}
+
+.debug-panel.minimized .debug-content {
+    display: none;
+}
+
+/* === Scrollbar do Debug Panel === */
+.debug-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.debug-content::-webkit-scrollbar-track {
+    background: var(--background-color);
+}
+
+.debug-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.debug-content::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* === Badge de Notificações === */
+.debug-header::after {
+    content: '';
+    position: absolute;
+    top: var(--spacing-sm);
+    right: var(--spacing-sm);
+    width: 8px;
+    height: 8px;
+    background-color: var(--success-color);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.debug-panel.has-updates .debug-header::after {
+    opacity: 1;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* === Modos Especiais === */
+.debug-panel.compact {
+    --debug-panel-width: 250px;
+}
+
+.debug-panel.compact .metric-grid {
+    grid-template-columns: 1fr;
+}
+
+.debug-panel.compact .metric-label {
+    font-size: 10px;
+}
+
+.debug-panel.compact .metric-value {
+    font-size: 12px;
+}
