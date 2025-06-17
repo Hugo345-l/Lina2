@@ -6,6 +6,40 @@
     flex-direction: column;
     overflow: hidden;
     transition: all var(--transition-normal);
+    position: relative;
+    width: var(--debug-panel-width);
+    min-width: 280px;
+    max-width: 50vw;
+}
+
+/* === Resize Handle === */
+.resize-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: transparent;
+    cursor: col-resize;
+    z-index: 1000;
+    transition: background-color var(--transition-fast);
+}
+
+.resize-handle:hover {
+    background-color: var(--primary-color);
+}
+
+.resize-handle:active {
+    background-color: var(--primary-color);
+    opacity: 0.8;
+}
+
+.debug-panel.resizing {
+    transition: none;
+}
+
+.debug-panel.resizing .resize-handle {
+    background-color: var(--primary-color);
 }
 
 .debug-panel.collapsed {
@@ -66,31 +100,103 @@
     transform: rotate(180deg);
 }
 
-/* === Debug Content === */
+/* === Debug Content - SCROLL GERAL OTIMIZADO === */
 .debug-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: var(--spacing-md);
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-lg);
+    gap: var(--spacing-md);
+    /* CORREÇÃO: Deixar flexbox gerenciar altura automaticamente */
+    min-height: 0; /* Permite que flex item encolha quando necessário */
+    /* Removidas configurações conflitantes de height/max-height */
 }
 
 .debug-section {
     background-color: var(--background-color);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
-    padding: var(--spacing-md);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+    /* NOVO: Garantir que seções não quebrem o scroll */
+    flex-shrink: 0; /* Evita encolhimento indesejado */
 }
 
-.debug-section h3 {
+.debug-section.collapsible {
+    position: relative;
+}
+
+/* === Section Headers (colapsíveis) === */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.section-header:hover {
+    background-color: var(--background-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.section-header h3 {
     font-size: 13px;
     font-weight: 600;
     color: var(--text-primary);
-    margin: 0 0 var(--spacing-md) 0;
+    margin: 0;
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
+}
+
+.collapse-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: var(--spacing-xs);
+    border-radius: var(--border-radius);
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.collapse-btn:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* === Section Content === */
+.section-content {
+    padding: var(--spacing-md);
+    overflow: hidden;
+    transition: all var(--transition-normal);
+}
+
+.debug-section.collapsed .section-content {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    opacity: 0;
+}
+
+.debug-section.collapsed .collapse-btn {
+    transform: rotate(-90deg);
+}
+
+.debug-section.collapsed .section-header {
+    border-bottom: none;
 }
 
 /* === Metric Grid === */
@@ -321,4 +427,289 @@
 
 .debug-panel.compact .metric-value {
     font-size: 12px;
+}
+
+/* === Métrica Full Width === */
+.metric.full-width {
+    grid-column: 1 / -1;
+}
+
+.metric.full-width .metric-value {
+    font-size: 12px;
+    word-break: break-all;
+    color: var(--text-secondary);
+}
+
+/* === Histórico de Mensagens - CORREÇÃO DO SCROLL INDIVIDUAL === */
+.message-history {
+    max-height: 400px; /* Aumentado para melhor usabilidade */
+    overflow-y: auto;
+    overflow-x: hidden; /* Previne scroll horizontal */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background-color: var(--surface-color);
+    /* NOVO: Garantir scroll suave e responsivo */
+    scroll-behavior: smooth;
+    flex-shrink: 0; /* Previne encolhimento em flex containers */
+}
+
+.history-placeholder {
+    padding: var(--spacing-lg);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.history-placeholder p {
+    margin: 0 0 var(--spacing-xs) 0;
+    font-weight: 500;
+}
+
+.history-placeholder small {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+/* === Histórico - Item Individual === */
+.history-item {
+    border-bottom: 1px solid var(--border-color);
+    transition: all var(--transition-fast);
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-item:hover {
+    background-color: var(--background-color);
+}
+
+/* === Histórico - Header do Item === */
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    cursor: pointer;
+    user-select: none;
+    transition: all var(--transition-fast);
+}
+
+.history-header:hover {
+    background-color: var(--border-color);
+}
+
+.history-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex: 1;
+    min-width: 0;
+}
+
+.history-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.history-meta {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.history-meta span {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.history-expand-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 10px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    padding: var(--spacing-xs);
+    border-radius: var(--border-radius);
+    min-width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.history-expand-btn:hover {
+    background-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* === Histórico - Conteúdo Expandido === */
+.history-details {
+    padding: 0;
+    overflow: hidden;
+    max-height: 0;
+    transition: all var(--transition-normal);
+    border-top: 1px solid var(--border-color);
+    background-color: var(--background-color);
+}
+
+.history-item.expanded .history-details {
+    max-height: 600px;
+    padding: var(--spacing-md);
+}
+
+.history-item.expanded .history-expand-btn {
+    transform: rotate(180deg);
+}
+
+.history-details-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+/* === Histórico - Blocos JSON === */
+.json-block {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.json-header {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--border-color);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.json-content {
+    padding: var(--spacing-md);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.4;
+}
+
+/* === Histórico - Status === */
+.history-status {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: var(--surface-color);
+    border-top: 1px solid var(--border-color);
+    font-size: 11px;
+}
+
+.status-badge {
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.status-badge.success {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: var(--success-color);
+}
+
+.status-badge.error {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: var(--error-color);
+}
+
+.timestamp {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin-left: auto;
+}
+
+/* === Scrollbar do Histórico === */
+.message-history::-webkit-scrollbar,
+.json-content::-webkit-scrollbar {
+    width: 4px;
+}
+
+.message-history::-webkit-scrollbar-track,
+.json-content::-webkit-scrollbar-track {
+    background: var(--surface-color);
+}
+
+.message-history::-webkit-scrollbar-thumb,
+.json-content::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 2px;
+}
+
+.message-history::-webkit-scrollbar-thumb:hover,
+.json-content::-webkit-scrollbar-thumb:hover {
+    background: var(--secondary-color);
+}
+
+/* === Estados Especiais === */
+.history-item.loading {
+    opacity: 0.6;
+}
+
+.history-item.error .history-header {
+    background-color: rgba(239, 68, 68, 0.05);
+    border-left: 3px solid var(--error-color);
+}
+
+.history-item.latest {
+    border-left: 3px solid var(--primary-color);
+    background-color: rgba(37, 99, 235, 0.02);
+}
+
+/* === Animações do Histórico === */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-item {
+    animation: slideIn 0.3s ease-out;
+}
+
+/* === Responsividade do Histórico === */
+@media (max-width: 768px) {
+    .message-history {
+        max-height: 200px;
+    }
+    
+    .history-meta {
+        font-size: 9px;
+        gap: var(--spacing-xs);
+    }
+    
+    .json-content {
+        font-size: 10px;
+        max-height: 150px;
+    }
+    
+    .history-details-content {
+        gap: var(--spacing-sm);
+    }
 }

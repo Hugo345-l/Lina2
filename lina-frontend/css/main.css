@@ -60,7 +60,7 @@ body {
 /* === Layout Principal === */
 .app-container {
     display: grid;
-    grid-template-columns: 1fr var(--debug-panel-width);
+    grid-template-columns: 1fr auto;
     height: 100vh;
     transition: grid-template-columns var(--transition-normal);
 }

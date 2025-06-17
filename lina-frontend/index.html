@@ -67,6 +67,7 @@
 
         <!-- Debug Panel -->
         <aside class="debug-panel" id="debugPanel">
+            <div class="resize-handle" id="resizeHandle"></div>
             <header class="debug-header">
                 <h2>🔍 Debug</h2>
                 <button class="toggle-panel" id="toggleDebug" title="Mostrar/Ocultar Debug">
@@ -75,63 +76,110 @@
             </header>
 
             <div class="debug-content">
-                <!-- Métricas da Última Interação -->
-                <section class="debug-section">
-                    <h3>⚡ Última Interação</h3>
-                    <div class="metric-grid">
-                        <div class="metric">
-                            <span class="metric-label">⏱️ Tempo</span>
-                            <span class="metric-value" id="lastDuration">-</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">💰 Custo</span>
-                            <span class="metric-value" id="lastCost">-</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">🎯 Tokens</span>
-                            <span class="metric-value" id="lastTokens">-</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">🤖 Modelo</span>
-                            <span class="metric-value" id="lastModel">-</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Métricas da Sessão -->
-                <section class="debug-section">
-                    <h3>📊 Sessão</h3>
-                    <div class="metric-grid">
-                        <div class="metric">
-                            <span class="metric-label">💵 Total</span>
-                            <span class="metric-value" id="sessionCost">$0.000</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">💬 Mensagens</span>
-                            <span class="metric-value" id="sessionMessages">0</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">🔥 Tokens</span>
-                            <span class="metric-value" id="sessionTokens">0</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">⏰ Tempo</span>
-                            <span class="metric-value" id="sessionTime">0s</span>
+                <!-- 📱 Última Mensagem (colapsível) -->
+                <section class="debug-section collapsible" id="lastMessageSection">
+                    <header class="section-header" data-section="lastMessage">
+                        <h3>📱 Última Mensagem</h3>
+                        <button class="collapse-btn">▼</button>
+                    </header>
+                    <div class="section-content" id="lastMessageContent">
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <span class="metric-label">⏱️ Tempo</span>
+                                <span class="metric-value" id="lastDuration">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">💰 Custo</span>
+                                <span class="metric-value" id="lastCost">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">🎯 Tokens</span>
+                                <span class="metric-value" id="lastTokens">-</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">🤖 Modelo</span>
+                                <span class="metric-value" id="lastModel">-</span>
+                            </div>
+                            <div class="metric full-width">
+                                <span class="metric-label">📧 Message ID</span>
+                                <span class="metric-value" id="lastMessageId">-</span>
+                            </div>
                         </div>
                     </div>
                 </section>
 
-                <!-- Status do Sistema -->
-                <section class="debug-section">
-                    <h3>🖥️ Sistema</h3>
-                    <div class="system-status">
-                        <div class="status-item">
-                            <span class="status-label">Backend:</span>
-                            <span class="status-value" id="backendStatus">Verificando...</span>
+                <!-- 📊 Sessão Atual (colapsível) -->
+                <section class="debug-section collapsible" id="sessionSection">
+                    <header class="section-header" data-section="session">
+                        <h3>📊 Sessão Atual</h3>
+                        <button class="collapse-btn">▼</button>
+                    </header>
+                    <div class="section-content" id="sessionContent">
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <span class="metric-label">💚 Total</span>
+                                <span class="metric-value" id="sessionCost">$0.000</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">📈 Mensagens</span>
+                                <span class="metric-value" id="sessionMessages">0</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">🔵 Tokens</span>
+                                <span class="metric-value" id="sessionTokens">0</span>
+                            </div>
+                            <div class="metric">
+                                <span class="metric-label">🕐 Tempo</span>
+                                <span class="metric-value" id="sessionTime">0s</span>
+                            </div>
+                            <div class="metric full-width">
+                                <span class="metric-label">💾 Thread</span>
+                                <span class="metric-value" id="currentThread">-</span>
+                            </div>
                         </div>
-                        <div class="status-item">
-                            <span class="status-label">API:</span>
-                            <span class="status-value" id="apiStatus">Standby</span>
+                    </div>
+                </section>
+
+                <!-- 📝 Histórico Expandível (colapsível) -->
+                <section class="debug-section collapsible" id="historySection">
+                    <header class="section-header" data-section="history">
+                        <h3>📝 Histórico Expandível</h3>
+                        <button class="collapse-btn">▼</button>
+                    </header>
+                    <div class="section-content" id="historyContent">
+                        <div class="message-history" id="messageHistory">
+                            <div class="history-placeholder">
+                                <p>📭 Nenhuma mensagem ainda</p>
+                                <small>Envie uma mensagem para ver o histórico expandível</small>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 💻 Sistema (colapsível) -->
+                <section class="debug-section collapsible" id="systemSection">
+                    <header class="section-header" data-section="system">
+                        <h3>💻 Sistema</h3>
+                        <button class="collapse-btn">▼</button>
+                    </header>
+                    <div class="section-content" id="systemContent">
+                        <div class="system-status">
+                            <div class="status-item">
+                                <span class="status-label">🟢 Backend:</span>
+                                <span class="status-value" id="backendStatus">Verificando...</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">🗄️ Database:</span>
+                                <span class="status-value" id="dbStatus">SQLite</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">🔗 API:</span>
+                                <span class="status-value" id="apiStatus">Standby</span>
+                            </div>
+                            <div class="status-item">
+                                <span class="status-label">🔍 LangSmith:</span>
+                                <span class="status-value" id="langsmithStatus">Ativo</span>
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -261,20 +261,32 @@ Transformar o sistema atual de "runs isolados" em um sistema de threads persiste
 - [ ] Scroll independente para o histórico de mensagens
 - [ ] Busca/filtro no histórico (futuro)
 
-**🧪 CHECKPOINT 2.3a: Teste de Seções Básicas do Debug Panel**
-- [ ] ✅ Verificar que seção "Última Mensagem" funciona como antes
-- [ ] ✅ Testar que seção "Sessão Atual" acumula corretamente
-- [ ] ✅ Confirmar que seção "Sistema" ainda funciona
-- [ ] ✅ Validar que layout das seções não quebrou
-- [ ] ✅ Testar colapso/expansão das seções se implementado
+**🧪 CHECKPOINT 2.3a: Teste de Seções Básicas do Debug Panel** ✅ **CONCLUÍDO (17/06/2025)**
+- [x] ✅ Verificar que seção "Última Mensagem" funciona como antes
+- [x] ✅ Testar que seção "Sessão Atual" acumula corretamente
+- [x] ✅ Confirmar que seção "Sistema" ainda funciona
+- [x] ✅ Validar que layout das seções não quebrou
+- [x] ✅ Testar colapso/expansão das seções implementado
+- [x] ✅ Corrigido mapeamento de IDs das seções para funcionar corretamente
 
-**🧪 CHECKPOINT 2.3b: Teste de Histórico Expandível**
-- [ ] ✅ Verificar se nova seção "Histórico de Mensagens" aparece
-- [ ] ✅ Testar se mensagens são adicionadas à lista após cada envio
-- [ ] ✅ Confirmar que timestamp e resumo aparecem corretamente
-- [ ] ✅ Testar click para expandir/colapsar mensagem individual
-- [ ] ✅ Validar que JSON é exibido formatado quando expandido
-- [ ] ✅ Testar scroll independente se histórico for longo
+**🧪 CHECKPOINT 2.3b: Teste de Histórico Expandível** ✅ **CONCLUÍDO (17/06/2025)**
+- [x] ✅ Verificar se nova seção "Histórico de Mensagens" aparece
+- [x] ✅ Testar se mensagens são adicionadas à lista após cada envio
+- [x] ✅ Confirmar que timestamp e resumo aparecem corretamente
+- [x] ✅ Testar click para expandir/colapsar mensagem individual
+- [x] ✅ Validar que debug info é exibido formatado (não JSON bruto)
+- [x] ✅ Implementar handle de resize para ajustar largura do panel
+- [x] ✅ **RESIZE FUNCIONANDO**: Expande corretamente para a esquerda
+- [x] ✅ **SCROLL GERAL FUNCIONANDO**: Funciona perfeitamente com seções expandidas
+- [x] ✅ **SCROLL INDIVIDUAL FUNCIONANDO**: Scroll das seções individuais operacional
+
+**✅ Resultados Finais dos CHECKPOINTS 2.3a e 2.3b:**
+- 🎨 **Debug Panel reestruturado**: Seções colapsíveis funcionando perfeitamente
+- 📝 **Histórico expandível**: Sistema completo de histórico por mensagem
+- 🔧 **Resize handle funcional**: Expande corretamente para a esquerda, mantém largura no localStorage
+- 📜 **Scroll geral otimizado**: Flexbox gerencia altura automaticamente, funciona com todas seções abertas
+- 📱 **Scroll individual**: Histórico de mensagens com scroll suave e responsivo
+- 🎯 **UX perfeita**: Todas funcionalidades operacionais, interface estável e responsiva
 
 ##### **2.4 Lógica de Reset e Tracking**
 - [ ] Implementar função para limpar chat visual

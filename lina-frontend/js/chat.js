@@ -103,9 +103,22 @@ class ChatManager {
             // Adicionar resposta da Lina
             this.addMessage(response.output, 'assistant');
             
-            // Atualizar debug panel
-            if (window.debugPanel) {
-                window.debugPanel.updateMetrics(response.debug_info);
+            // 📝 CHECKPOINT 2.3b: Atualizar debug panel com histórico expandível
+            if (window.debugPanel && response.debug_info) {
+                // Preparar debug info expandido com mensagens do usuário e assistente
+                const expandedDebugInfo = {
+                    ...response.debug_info,
+                    user_message: message,
+                    assistant_response: response.output
+                };
+                
+                window.debugPanel.updateMetrics(expandedDebugInfo);
+                window.debugPanel.updateSessionCount(this.messageCount);
+                
+                // 🧵 CHECKPOINT 1.4: Atualizar thread info
+                if (response.debug_info.thread_id) {
+                    window.debugPanel.updateThreadInfo(response.debug_info.thread_id);
+                }
             }
             
         } catch (error) {
@@ -300,6 +313,9 @@ class ChatManager {
         if (window.debugPanel) {
             window.debugPanel.updateSessionCount(0);
             window.debugPanel.updateThreadInfo(null);
+            
+            // 📝 CHECKPOINT 2.3b: Limpar histórico expandível na nova conversa
+            window.debugPanel.clearMessageHistory();
         }
         
         console.log('[Chat] 🧵 Chat limpo e thread resetada');

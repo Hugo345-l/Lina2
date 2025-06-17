@@ -1,6 +1,7 @@
 /**
- * Gerenciador do painel de debug
- * Controla métricas, estatísticas e informações do sistema
+ * Gerenciador do painel de debug - VERSÃO EXPANDÍVEL
+ * Controla métricas, estatísticas e histórico expandível de mensagens
+ * CHECKPOINTS 2.3a e 2.3b - Reestruturação expandível do debug panel
  */
 
 class DebugPanel {
@@ -8,19 +9,26 @@ class DebugPanel {
         this.panel = document.getElementById('debugPanel');
         this.toggleButton = document.getElementById('toggleDebug');
         
-        // Elementos das métricas
+        // Elementos das métricas - Última Mensagem
         this.lastDuration = document.getElementById('lastDuration');
         this.lastCost = document.getElementById('lastCost');
         this.lastTokens = document.getElementById('lastTokens');
         this.lastModel = document.getElementById('lastModel');
+        this.lastMessageId = document.getElementById('lastMessageId');
         
+        // Elementos das métricas - Sessão
         this.sessionCost = document.getElementById('sessionCost');
         this.sessionMessages = document.getElementById('sessionMessages');
         this.sessionTokens = document.getElementById('sessionTokens');
         this.sessionTime = document.getElementById('sessionTime');
+        this.currentThread = document.getElementById('currentThread');
         
+        // Elementos do sistema
         this.backendStatus = document.getElementById('backendStatus');
         this.apiStatus = document.getElementById('apiStatus');
+        
+        // Histórico expandível
+        this.messageHistory = document.getElementById('messageHistory');
         
         // Estado interno
         this.isCollapsed = false;
@@ -28,6 +36,18 @@ class DebugPanel {
         this.totalCost = 0;
         this.totalTokens = 0;
         this.totalMessages = 0;
+        this.currentThreadId = null;
+        
+        // Histórico de mensagens (para histórico expandível)
+        this.messageHistoryData = [];
+        
+        // Estado das seções (colapsadas ou não)
+        this.sectionStates = {
+            lastMessage: true,    // expandida por padrão
+            session: true,        // expandida por padrão
+            history: true,        // expandida por padrão
+            system: false         // colapsada por padrão
+        };
         
         this.init();
     }
@@ -36,13 +56,200 @@ class DebugPanel {
         // Event listeners
         this.toggleButton.addEventListener('click', () => this.togglePanel());
         
+        // 📱 CHECKPOINT 2.3a: Setup das seções colapsíveis
+        this.setupCollapsibleSections();
+        
+        // 🔧 Setup do redimensionamento
+        this.setupResizing();
+        
         // Verificar status inicial
         this.checkSystemStatus();
         
         // Atualizar tempo de sessão periodicamente
         setInterval(() => this.updateSessionTime(), 1000);
         
-        console.log('[Debug Panel] Inicializado');
+        // Carregar estado salvo das seções
+        this.loadSectionStates();
+        
+        console.log('[Debug Panel] ✅ CHECKPOINT 2.3a - Seções colapsíveis configuradas');
+        console.log('[Debug Panel] ✅ CHECKPOINT 2.3b - Histórico expandível configurado');
+        console.log('[Debug Panel] ✅ Redimensionamento configurado');
+        console.log('[Debug Panel] Inicializado com suporte expandível');
+    }
+
+    /**
+     * 📱 CHECKPOINT 2.3a: Setup das seções colapsíveis
+     */
+    setupCollapsibleSections() {
+        console.log('[Debug Panel] 📱 CHECKPOINT 2.3a: Configurando seções colapsíveis');
+        
+        // Encontrar todos os headers de seção
+        const sectionHeaders = document.querySelectorAll('.section-header');
+        
+        sectionHeaders.forEach(header => {
+            header.addEventListener('click', (e) => {
+                const sectionName = header.getAttribute('data-section');
+                this.toggleSection(sectionName);
+            });
+        });
+        
+        // Aplicar estado inicial das seções
+        this.applyInitialSectionStates();
+        
+        console.log('[Debug Panel] 📱 Seções colapsíveis configuradas:', Object.keys(this.sectionStates));
+    }
+
+    /**
+     * 📱 CHECKPOINT 2.3a: Alterna estado de uma seção
+     */
+    toggleSection(sectionName) {
+        console.log(`[Debug Panel] 📱 Alternando seção: ${sectionName}`);
+        
+        // Inverter estado
+        this.sectionStates[sectionName] = !this.sectionStates[sectionName];
+        
+        // Mapear nomes para IDs corretos do HTML
+        const sectionIdMap = {
+            'lastMessage': 'lastMessageSection',
+            'session': 'sessionSection', 
+            'history': 'historySection',
+            'system': 'systemSection'
+        };
+        
+        // Aplicar estado visual
+        const sectionId = sectionIdMap[sectionName] || `${sectionName}Section`;
+        const section = document.getElementById(sectionId);
+        if (section) {
+            if (this.sectionStates[sectionName]) {
+                section.classList.remove('collapsed');
+            } else {
+                section.classList.add('collapsed');
+            }
+        }
+        
+        // Salvar estado no localStorage
+        this.saveSectionStates();
+        
+        console.log(`[Debug Panel] 📱 Seção ${sectionName}: ${this.sectionStates[sectionName] ? 'expandida' : 'colapsada'}`);
+    }
+
+    /**
+     * 📱 CHECKPOINT 2.3a: Aplicar estados iniciais das seções
+     */
+    applyInitialSectionStates() {
+        // Mapear nomes para IDs corretos do HTML
+        const sectionIdMap = {
+            'lastMessage': 'lastMessageSection',
+            'session': 'sessionSection', 
+            'history': 'historySection',
+            'system': 'systemSection'
+        };
+        
+        Object.entries(this.sectionStates).forEach(([sectionName, isExpanded]) => {
+            const sectionId = sectionIdMap[sectionName] || `${sectionName}Section`;
+            const section = document.getElementById(sectionId);
+            if (section) {
+                if (isExpanded) {
+                    section.classList.remove('collapsed');
+                } else {
+                    section.classList.add('collapsed');
+                }
+            }
+        });
+    }
+
+    /**
+     * 📱 CHECKPOINT 2.3a: Salvar estados das seções
+     */
+    saveSectionStates() {
+        localStorage.setItem('debugPanelSectionStates', JSON.stringify(this.sectionStates));
+    }
+
+    /**
+     * 📱 CHECKPOINT 2.3a: Carregar estados das seções
+     */
+    loadSectionStates() {
+        const saved = localStorage.getItem('debugPanelSectionStates');
+        if (saved) {
+            try {
+                this.sectionStates = { ...this.sectionStates, ...JSON.parse(saved) };
+                this.applyInitialSectionStates();
+                console.log('[Debug Panel] 📱 Estados das seções carregados:', this.sectionStates);
+            } catch (error) {
+                console.warn('[Debug Panel] 📱 Erro ao carregar estados das seções:', error);
+            }
+        }
+    }
+
+    /**
+     * 🔧 Setup do redimensionamento do debug panel
+     */
+    setupResizing() {
+        const resizeHandle = document.getElementById('resizeHandle');
+        if (!resizeHandle) {
+            console.warn('[Debug Panel] 🔧 Resize handle não encontrado');
+            return;
+        }
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        // Carregar largura salva
+        const savedWidth = localStorage.getItem('debugPanelWidth');
+        if (savedWidth) {
+            this.panel.style.width = savedWidth + 'px';
+        }
+
+        // Mouse down no resize handle
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = parseInt(document.defaultView.getComputedStyle(this.panel).width, 10);
+            
+            this.panel.classList.add('resizing');
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+
+            console.log('[Debug Panel] 🔧 Iniciando redimensionamento');
+        });
+
+        // Mouse move - redimensionar
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+
+            // CORREÇÃO CRÍTICA: Inverter lógica para expandir corretamente para a esquerda
+            const diffX = startX - e.clientX; // Diferença (positiva = arrastando para esquerda)
+            const newWidth = startWidth + diffX; // Expandir quando arrastamos para esquerda
+
+            // Limites de largura
+            const minWidth = 280;
+            const maxWidth = window.innerWidth * 0.6; // 60% da tela (aumentado para mais flexibilidade)
+
+            if (newWidth >= minWidth && newWidth <= maxWidth) {
+                this.panel.style.width = newWidth + 'px';
+                
+                console.log(`[Debug Panel] 🔧 Redimensionando: ${newWidth}px`);
+            }
+        });
+
+        // Mouse up - finalizar redimensionamento
+        document.addEventListener('mouseup', () => {
+            if (!isResizing) return;
+
+            isResizing = false;
+            this.panel.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+
+            // Salvar largura no localStorage
+            const finalWidth = parseInt(document.defaultView.getComputedStyle(this.panel).width, 10);
+            localStorage.setItem('debugPanelWidth', finalWidth);
+
+            console.log('[Debug Panel] 🔧 Redimensionamento finalizado:', finalWidth + 'px');
+        });
+
+        console.log('[Debug Panel] 🔧 Redimensionamento configurado');
     }
 
     /**
@@ -75,6 +282,12 @@ class DebugPanel {
         this.updateElement(this.lastTokens, `${debugInfo.tokens_used}`, 'tokens');
         this.updateElement(this.lastModel, this.formatModelName(debugInfo.model_name), 'model');
         
+        // Message ID (novo campo)
+        if (this.lastMessageId && debugInfo.message_id) {
+            const shortMessageId = debugInfo.message_id.split('_').pop() || debugInfo.message_id.slice(-8);
+            this.updateElement(this.lastMessageId, shortMessageId, 'model');
+        }
+        
         // Acumular dados da sessão
         this.totalCost += debugInfo.cost;
         this.totalTokens += debugInfo.tokens_used;
@@ -83,9 +296,233 @@ class DebugPanel {
         this.updateElement(this.sessionCost, `$${this.totalCost.toFixed(6)}`, 'cost');
         this.updateElement(this.sessionTokens, `${this.totalTokens}`, 'tokens');
         
+        // 📝 CHECKPOINT 2.3b: Adicionar ao histórico expandível
+        this.addToMessageHistory(debugInfo);
+        
         // Marcar como atualizado
         this.panel.classList.add('has-updates');
         setTimeout(() => this.panel.classList.remove('has-updates'), 2000);
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Adiciona mensagem ao histórico expandível
+     */
+    addToMessageHistory(debugInfo) {
+        console.log('[Debug Panel] 📝 CHECKPOINT 2.3b: Adicionando ao histórico expandível');
+        
+        // Criar objeto de histórico
+        const historyItem = {
+            id: debugInfo.message_id || `msg_${Date.now()}`,
+            timestamp: new Date().toISOString(),
+            userMessage: debugInfo.user_message || 'Mensagem do usuário',
+            assistantResponse: debugInfo.assistant_response || 'Resposta da Lina',
+            debugInfo: { ...debugInfo },
+            status: 'success'
+        };
+        
+        // Adicionar ao início do array (mais recente primeiro)
+        this.messageHistoryData.unshift(historyItem);
+        
+        // Limitar histórico a 50 mensagens
+        if (this.messageHistoryData.length > 50) {
+            this.messageHistoryData = this.messageHistoryData.slice(0, 50);
+        }
+        
+        // Renderizar histórico atualizado
+        this.renderMessageHistory();
+        
+        console.log(`[Debug Panel] 📝 Histórico expandível atualizado: ${this.messageHistoryData.length} mensagens`);
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Renderiza o histórico de mensagens
+     */
+    renderMessageHistory() {
+        if (!this.messageHistory) return;
+        
+        // Se não há mensagens, mostrar placeholder
+        if (this.messageHistoryData.length === 0) {
+            this.messageHistory.innerHTML = `
+                <div class="history-placeholder">
+                    <p>📭 Nenhuma mensagem ainda</p>
+                    <small>Envie uma mensagem para ver o histórico expandível</small>
+                </div>
+            `;
+            return;
+        }
+        
+        // Renderizar lista de mensagens
+        const historyHTML = this.messageHistoryData.map((item, index) => 
+            this.renderHistoryItem(item, index)
+        ).join('');
+        
+        this.messageHistory.innerHTML = historyHTML;
+        
+        // Adicionar event listeners para expansão
+        this.setupHistoryItemListeners();
+        
+        console.log(`[Debug Panel] 📝 Histórico renderizado: ${this.messageHistoryData.length} itens`);
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Renderiza um item individual do histórico
+     */
+    renderHistoryItem(item, index) {
+        const isLatest = index === 0;
+        const timestamp = new Date(item.timestamp).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
+        // Criar título resumido da mensagem
+        const userMessagePreview = item.userMessage.length > 30 
+            ? item.userMessage.substring(0, 30) + '...'
+            : item.userMessage;
+            
+        return `
+            <div class="history-item ${isLatest ? 'latest' : ''}" data-item-id="${item.id}">
+                <div class="history-header">
+                    <div class="history-summary">
+                        <div class="history-title">
+                            ${isLatest ? '📍' : '💬'} ${userMessagePreview}
+                        </div>
+                        <div class="history-meta">
+                            <span>⏱️ ${item.debugInfo.duration}s</span>
+                            <span>💰 $${item.debugInfo.cost.toFixed(6)}</span>
+                            <span>🎯 ${item.debugInfo.tokens_used} tokens</span>
+                            <span>🕐 ${timestamp}</span>
+                        </div>
+                    </div>
+                    <button class="history-expand-btn" data-action="toggle-history" data-item-id="${item.id}">
+                        ▼
+                    </button>
+                </div>
+                <div class="history-details">
+                    <div class="history-details-content">
+                        <!-- Mensagem do Usuário -->
+                        <div class="json-block">
+                            <div class="json-header">👤 Mensagem do Usuário</div>
+                            <div class="json-content">${this.escapeHtml(item.userMessage)}</div>
+                        </div>
+                        
+                        <!-- Resposta da Lina -->
+                        <div class="json-block">
+                            <div class="json-header">🤖 Resposta da Lina</div>
+                            <div class="json-content">${this.escapeHtml(item.assistantResponse)}</div>
+                        </div>
+                        
+                        <!-- Debug Info Completo -->
+                        <div class="json-block">
+                            <div class="json-header">🔍 Debug Info Completo</div>
+                            <div class="json-content">${this.formatDebugInfo(item.debugInfo)}</div>
+                        </div>
+                    </div>
+                    <div class="history-status">
+                        <span class="status-badge ${item.status}">${item.status === 'success' ? '✅ Sucesso' : '❌ Erro'}</span>
+                        <span class="timestamp">${timestamp}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Setup dos event listeners do histórico
+     */
+    setupHistoryItemListeners() {
+        // Event listeners para botões de expansão do histórico
+        const expandButtons = document.querySelectorAll('[data-action="toggle-history"]');
+        
+        expandButtons.forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const itemId = button.getAttribute('data-item-id');
+                this.toggleHistoryItem(itemId);
+            });
+        });
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Alterna expansão de um item do histórico
+     */
+    toggleHistoryItem(itemId) {
+        const historyItem = document.querySelector(`[data-item-id="${itemId}"]`);
+        if (!historyItem) return;
+        
+        const isExpanded = historyItem.classList.contains('expanded');
+        
+        if (isExpanded) {
+            historyItem.classList.remove('expanded');
+            console.log(`[Debug Panel] 📝 Item do histórico colapsado: ${itemId}`);
+        } else {
+            // Fechar outros itens expandidos (opcional - comentar para permitir múltiplos abertos)
+            document.querySelectorAll('.history-item.expanded').forEach(item => {
+                if (item !== historyItem) item.classList.remove('expanded');
+            });
+            
+            historyItem.classList.add('expanded');
+            console.log(`[Debug Panel] 📝 Item do histórico expandido: ${itemId}`);
+        }
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Formata debug info de forma legível
+     */
+    formatDebugInfo(debugInfo) {
+        if (!debugInfo) return 'N/A';
+        
+        // Organizar campos importantes primeiro
+        const organized = {
+            '💰 Custo': `$${debugInfo.cost?.toFixed(6) || 'N/A'}`,
+            '🎯 Tokens Totais': debugInfo.tokens_used || 'N/A',
+            '📤 Tokens Prompt': debugInfo.prompt_tokens || 'N/A', 
+            '📥 Tokens Resposta': debugInfo.completion_tokens || 'N/A',
+            '⏱️ Duração': `${debugInfo.duration || 'N/A'}s`,
+            '🤖 Modelo': debugInfo.model_name || 'N/A',
+            '🆔 Message ID': debugInfo.message_id || 'N/A',
+            '🧵 Thread ID': debugInfo.thread_id || 'N/A',
+            '#️⃣ Sequência': debugInfo.message_sequence || 'N/A'
+        };
+        
+        // Formatação limpa linha por linha
+        let formatted = '';
+        Object.entries(organized).forEach(([key, value]) => {
+            formatted += `${key}: ${value}\n`;
+        });
+        
+        return formatted.trim();
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Escapa HTML para segurança
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Limpa histórico de mensagens
+     */
+    clearMessageHistory() {
+        this.messageHistoryData = [];
+        this.renderMessageHistory();
+        console.log('[Debug Panel] 📝 Histórico de mensagens limpo');
+    }
+
+    /**
+     * 📝 CHECKPOINT 2.3b: Atualiza mensagem específica do histórico (para uso futuro)
+     */
+    updateHistoryMessage(messageId, userMessage, assistantResponse) {
+        const item = this.messageHistoryData.find(item => item.id === messageId);
+        if (item) {
+            item.userMessage = userMessage;
+            item.assistantResponse = assistantResponse;
+            this.renderMessageHistory();
+            console.log(`[Debug Panel] 📝 Mensagem do histórico atualizada: ${messageId}`);
+        }
     }
 
     /**
