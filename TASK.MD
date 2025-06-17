@@ -289,19 +289,26 @@ Transformar o sistema atual de "runs isolados" em um sistema de threads persiste
 - 🎯 **UX perfeita**: Todas funcionalidades operacionais, interface estável e responsiva
 
 ##### **2.4 Lógica de Reset e Tracking**
-- [ ] Implementar função para limpar chat visual
-- [ ] Criar função para reset de métricas da sessão
-- [ ] **Limpar histórico expandível** ao criar nova thread
-- [ ] Manter histórico de "última mensagem" sempre atualizado
-- [ ] Gerenciar estado do `thread_id` atual no JavaScript
-- [ ] Persistir estado de expansão das mensagens no localStorage
+- [x] Implementar função para limpar chat visual
+- [x] Criar função para reset de métricas da sessão
+- [x] **Limpar histórico expandível** ao criar nova thread
+- [x] Manter histórico de "última mensagem" sempre atualizado
+- [x] Gerenciar estado do `thread_id` atual no JavaScript
+- [x] Persistir estado de expansão das mensagens no localStorage
 
-**🧪 CHECKPOINT 2.4: Teste de Reset e Tracking**
-- [ ] ✅ Testar função de limpar chat (mensagens removidas visualmente)
-- [ ] ✅ Verificar reset de métricas (sessão volta para zero)
-- [ ] ✅ Confirmar que histórico expandível é limpo corretamente
-- [ ] ✅ Testar que `thread_id` é atualizado no JavaScript após reset
-- [ ] ✅ Validar persistência no localStorage (expansão de mensagens)
+**🧪 CHECKPOINT 2.4: Teste de Reset e Tracking** ✅ **CONCLUÍDO (17/06/2025)**
+- [x] ✅ Testar função de limpar chat (mensagens removidas visualmente)
+- [x] ✅ Verificar reset de métricas (sessão volta para zero)
+- [x] ✅ Confirmar que histórico expandível é limpo corretamente
+- [x] ✅ Testar que `thread_id` é atualizado no JavaScript após reset
+- [x] ✅ Validar persistência no localStorage (expansão de mensagens)
+
+**✅ Resultados do CHECKPOINT 2.4:**
+- 🔄 **Reset completo implementado**: Função `resetSession()` limpa histórico, métricas e thread
+- 💾 **Persistência no localStorage**: Estados de expansão das mensagens salvos e restaurados automaticamente
+- 🧹 **Limpeza de histórico**: Função `clearMessageHistory()` e `clearMessageExpansionStates()` funcionais
+- 🎯 **Thread management**: `thread_id` gerenciado corretamente no JavaScript
+- ✅ **Integração perfeita**: Reset funciona em harmonia com nova conversa e threading
 
 #### **🔄 PARTE 3: Integração e Fluxo**
 

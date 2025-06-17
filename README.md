@@ -120,9 +120,31 @@ A **personalidade base da Lina** foi implementada e está funcional para convers
 - 📱 **Design integrado**: Visual discreto no header, não obstrutivo
 - ✅ **Threading funcional**: Backend cria threads separadas no SQLite
 
+**✅ CHECKPOINT 2.3a: Seções Básicas do Debug Panel ✅ CONCLUÍDO (17/06/2025)**
+- 🎨 **Debug Panel reestruturado**: Seções colapsíveis funcionando perfeitamente
+- 📱 **Seções organizadas**: "Última Mensagem", "Sessão Atual", "Sistema"
+- 🔧 **Colapso/expansão**: Todas as seções podem ser colapsadas/expandidas
+- 💾 **Estado persistente**: Preferências de seção salvas no localStorage
+- 🎯 **Layout otimizado**: Mapeamento correto de IDs das seções
+
+**✅ CHECKPOINT 2.3b: Histórico Expandível ✅ CONCLUÍDO (17/06/2025)**
+- 📝 **Histórico por mensagem**: Cada mensagem individual com debug completo
+- 🔧 **Expansão granular**: Click para expandir/colapsar mensagem específica
+- 📜 **Scroll otimizado**: Funciona perfeitamente com seções expandidas
+- 🎨 **Resize handle**: Expande corretamente para a esquerda, largura persistente
+- 🎯 **UX perfeita**: Interface estável, responsiva e funcional
+
+**✅ CHECKPOINT 2.4: Lógica de Reset e Tracking ✅ CONCLUÍDO (17/06/2025)**
+- 🔄 **Reset completo**: Função `resetSession()` limpa histórico, métricas e thread
+- 💾 **Persistência localStorage**: Estados de expansão salvos e restaurados automaticamente
+- 🧹 **Limpeza inteligente**: Histórico e estados limpos em nova conversa
+- 🎯 **Thread management**: `thread_id` gerenciado corretamente no JavaScript
+- ✅ **Integração perfeita**: Reset funciona em harmonia com threading
+
 **🔄 PRÓXIMOS CHECKPOINTS:**
-- **2.3**: Debug Panel expandível com histórico de mensagens
-- **2.4**: Lógica de reset e tracking completa
+- **3.1**: Fluxo de Nova Conversa completo
+- **3.2**: Fluxo de Mensagem com Threading
+- **3.3**: Persistência automática e validação
 
 O backend receberá configuração do `SqliteSaver` do LangGraph criando arquivo `lina_conversations.db`, modificação do wrapper principal para adicionar parâmetro `thread_id`, enriquecimento do `debug_info` com identificadores de thread e mensagem, e implementação do endpoint `POST /chat/new-thread`. O frontend será atualizado com botão "Nova Conversa", display de thread ID atual, reestruturação do debug panel em seções "Última Mensagem", "Sessão Atual", e futuramente "Histórico Expandível" onde cada mensagem individual poderá ser expandida mostrando request/response JSON completo, métricas detalhadas, e logs de execução.
 

@@ -287,6 +287,77 @@ O frontend agora suporta **threads persistentes** que mantêm a memória de conv
 [Debug Panel] 🧵 Thread ativa: thread_default_user_2cf207d1
 ```
 
+#### **💾 CHECKPOINT 2.4: PERSISTÊNCIA DE ESTADO (IMPLEMENTADO - 17/06/2025)**
+
+##### **📍 Localização**
+- **JavaScript**: `js/debug-panel.js` (funções de persistência)
+- **Storage**: `localStorage` do navegador
+
+##### **🔧 Funcionalidades de Persistência**
+```javascript
+// Funções implementadas:
+saveMessageExpansionStates()    // Salva estados de expansão
+loadMessageExpansionStates()    // Carrega estados salvos  
+applyMessageExpansionStates()   // Aplica estados após renderização
+clearMessageExpansionStates()   // Limpa estados (reset)
+```
+
+##### **⚡ Como Funciona**
+1. **Expansão de mensagem**: Estado salvo automaticamente no localStorage
+2. **Reload da página**: Estados são restaurados automaticamente
+3. **Nova conversa**: Estados são limpos adequadamente
+4. **Reset completo**: Função `resetSession()` limpa tudo
+
+##### **📊 Estrutura dos Dados Salvos**
+```javascript
+// localStorage: 'debugPanelMessageExpansion'
+{
+  "msg_1705709612345": true,    // Mensagem expandida
+  "msg_1705709698234": false,   // Mensagem colapsada (removida)
+  "msg_1705709756789": true     // Outra mensagem expandida
+}
+```
+
+##### **🔄 Reset Completo Implementado**
+```javascript
+// Função resetSession() expandida:
+resetSession() {
+  // ... limpeza de métricas existente ...
+  
+  // ✅ CHECKPOINT 2.4: Novos recursos
+  if (this.lastMessageId) {
+    this.updateElement(this.lastMessageId, '-', '');
+  }
+  
+  // Limpar thread info
+  this.currentThreadId = null;
+  if (this.currentThread) {
+    this.updateElement(this.currentThread, 'Nova sessão', 'info');
+  }
+  
+  // Limpar histórico expandível
+  this.clearMessageHistory();
+  
+  // Limpar estados de expansão
+  this.clearMessageExpansionStates();
+}
+```
+
+##### **🧵 Integração com Threading**
+- **Nova thread**: Estados de expansão limpos automaticamente
+- **Thread management**: `thread_id` resetado no JavaScript
+- **Continuidade**: Estados mantidos dentro da mesma thread
+- **Logs detalhados**: Persistência visível no console
+
+##### **📋 Logs de Funcionamento**
+```javascript
+[Debug Panel] ✅ CHECKPOINT 2.4: Estados de expansão salvos: 3
+[Debug Panel] ✅ CHECKPOINT 2.4: Estados de expansão carregados: 3
+[Debug Panel] ✅ CHECKPOINT 2.4: Estado aplicado - msg_123: expandido
+[Debug Panel] ✅ CHECKPOINT 2.4: Estados de expansão limpos
+[Debug Panel] ✅ CHECKPOINT 2.4: Sessão resetada completamente
+```
+
 #### **📱 Interface de Threading**
 - **Thread ID atual**: Exibido discretamente no debug panel
 - **Indicador de sessão**: Métricas acumuladas por thread
@@ -529,27 +600,4 @@ O frontend agora suporta **threads persistentes** que mantêm a memória de conv
 
 ---
 
-## 🔧 **TODOS OS PROBLEMAS RESOLVIDOS**
 
-### **✅ Correções Implementadas**
-1. ✅ **Resize Handle**: Direção corrigida - expande para esquerda
-2. ✅ **Scroll Geral**: Flexbox otimizado - funciona com todas seções
-3. ✅ **Layout CSS**: Grid container respeitando redimensionamento
-4. ✅ **Scroll Individual**: Validado e funcionando em todas seções
-5. ✅ **Responsividade**: Testado em diferentes resoluções
-6. ✅ **Persistência**: Largura salva corretamente no localStorage
-
-### **✅ Testes Validados**
-- [x] ✅ Resize expandindo para esquerda (pegando espaço do chat)
-- [x] ✅ Scroll geral funcionando com todas as seções abertas
-- [x] ✅ Scroll individual das seções funcionando
-- [x] ✅ Responsividade do resize em mobile
-- [x] ✅ Persistência da largura entre sessões
-- [x] ✅ Performance otimizada com histórico longo
-- [x] ✅ Estados das seções salvos no localStorage
-
----
-
-**🎉 Interface construída com amor e atenção aos detalhes!**
-
-*⚠️ Problemas identificados e documentados para correção prioritária*

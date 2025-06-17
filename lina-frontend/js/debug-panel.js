@@ -41,6 +41,9 @@ class DebugPanel {
         // Histórico de mensagens (para histórico expandível)
         this.messageHistoryData = [];
         
+        // ✅ CHECKPOINT 2.4: Estado de expansão das mensagens do histórico
+        this.messageExpansionStates = {};
+        
         // Estado das seções (colapsadas ou não)
         this.sectionStates = {
             lastMessage: true,    // expandida por padrão
@@ -71,8 +74,12 @@ class DebugPanel {
         // Carregar estado salvo das seções
         this.loadSectionStates();
         
+        // ✅ CHECKPOINT 2.4: Carregar estados de expansão das mensagens
+        this.loadMessageExpansionStates();
+        
         console.log('[Debug Panel] ✅ CHECKPOINT 2.3a - Seções colapsíveis configuradas');
         console.log('[Debug Panel] ✅ CHECKPOINT 2.3b - Histórico expandível configurado');
+        console.log('[Debug Panel] ✅ CHECKPOINT 2.4 - Persistência de estado configurada');
         console.log('[Debug Panel] ✅ Redimensionamento configurado');
         console.log('[Debug Panel] Inicializado com suporte expandível');
     }
@@ -361,7 +368,11 @@ class DebugPanel {
         // Adicionar event listeners para expansão
         this.setupHistoryItemListeners();
         
+        // ✅ CHECKPOINT 2.4: Aplicar estados de expansão salvos
+        this.applyMessageExpansionStates();
+        
         console.log(`[Debug Panel] 📝 Histórico renderizado: ${this.messageHistoryData.length} itens`);
+        console.log(`[Debug Panel] ✅ CHECKPOINT 2.4: Estados de expansão aplicados: ${Object.keys(this.messageExpansionStates).length}`);
     }
 
     /**
@@ -445,6 +456,7 @@ class DebugPanel {
 
     /**
      * 📝 CHECKPOINT 2.3b: Alterna expansão de um item do histórico
+     * ✅ CHECKPOINT 2.4: Com persistência no localStorage
      */
     toggleHistoryItem(itemId) {
         const historyItem = document.querySelector(`[data-item-id="${itemId}"]`);
@@ -454,16 +466,28 @@ class DebugPanel {
         
         if (isExpanded) {
             historyItem.classList.remove('expanded');
+            // ✅ CHECKPOINT 2.4: Remover do estado de expansão
+            delete this.messageExpansionStates[itemId];
             console.log(`[Debug Panel] 📝 Item do histórico colapsado: ${itemId}`);
         } else {
             // Fechar outros itens expandidos (opcional - comentar para permitir múltiplos abertos)
             document.querySelectorAll('.history-item.expanded').forEach(item => {
-                if (item !== historyItem) item.classList.remove('expanded');
+                if (item !== historyItem) {
+                    item.classList.remove('expanded');
+                    // ✅ CHECKPOINT 2.4: Remover do estado outros itens
+                    const otherItemId = item.getAttribute('data-item-id');
+                    if (otherItemId) delete this.messageExpansionStates[otherItemId];
+                }
             });
             
             historyItem.classList.add('expanded');
+            // ✅ CHECKPOINT 2.4: Salvar no estado de expansão
+            this.messageExpansionStates[itemId] = true;
             console.log(`[Debug Panel] 📝 Item do histórico expandido: ${itemId}`);
         }
+        
+        // ✅ CHECKPOINT 2.4: Persistir estados no localStorage
+        this.saveMessageExpansionStates();
     }
 
     /**
@@ -664,6 +688,22 @@ class DebugPanel {
         this.updateElement(this.lastCost, '-', '');
         this.updateElement(this.lastTokens, '-', '');
         this.updateElement(this.lastModel, '-', '');
+        
+        // ✅ CHECKPOINT 2.4: Limpar message ID da última mensagem
+        if (this.lastMessageId) {
+            this.updateElement(this.lastMessageId, '-', '');
+        }
+        
+        // ✅ CHECKPOINT 2.4: Limpar thread info
+        this.currentThreadId = null;
+        if (this.currentThread) {
+            this.updateElement(this.currentThread, 'Nova sessão', 'info');
+        }
+        
+        // ✅ CHECKPOINT 2.4: Limpar histórico expandível ao resetar sessão
+        this.clearMessageHistory();
+        
+        console.log('[Debug Panel] ✅ CHECKPOINT 2.4: Sessão resetada completamente - histórico, métricas e thread');
     }
 
     /**
@@ -679,6 +719,52 @@ class DebugPanel {
             averageCostPerMessage: this.totalMessages > 0 ? this.totalCost / this.totalMessages : 0,
             averageTokensPerMessage: this.totalMessages > 0 ? this.totalTokens / this.totalMessages : 0
         };
+    }
+
+    /**
+     * ✅ CHECKPOINT 2.4: Salva estados de expansão das mensagens
+     */
+    saveMessageExpansionStates() {
+        localStorage.setItem('debugPanelMessageExpansion', JSON.stringify(this.messageExpansionStates));
+        console.log('[Debug Panel] ✅ CHECKPOINT 2.4: Estados de expansão salvos:', Object.keys(this.messageExpansionStates).length);
+    }
+
+    /**
+     * ✅ CHECKPOINT 2.4: Carrega estados de expansão das mensagens
+     */
+    loadMessageExpansionStates() {
+        const saved = localStorage.getItem('debugPanelMessageExpansion');
+        if (saved) {
+            try {
+                this.messageExpansionStates = JSON.parse(saved);
+                console.log('[Debug Panel] ✅ CHECKPOINT 2.4: Estados de expansão carregados:', Object.keys(this.messageExpansionStates).length);
+            } catch (error) {
+                console.warn('[Debug Panel] ✅ CHECKPOINT 2.4: Erro ao carregar estados de expansão:', error);
+                this.messageExpansionStates = {};
+            }
+        }
+    }
+
+    /**
+     * ✅ CHECKPOINT 2.4: Aplica estados de expansão salvos após renderização
+     */
+    applyMessageExpansionStates() {
+        Object.entries(this.messageExpansionStates).forEach(([messageId, isExpanded]) => {
+            const historyItem = document.querySelector(`[data-item-id="${messageId}"]`);
+            if (historyItem && isExpanded) {
+                historyItem.classList.add('expanded');
+                console.log(`[Debug Panel] ✅ CHECKPOINT 2.4: Estado aplicado - ${messageId}: expandido`);
+            }
+        });
+    }
+
+    /**
+     * ✅ CHECKPOINT 2.4: Limpa estados de expansão (usado no reset)
+     */
+    clearMessageExpansionStates() {
+        this.messageExpansionStates = {};
+        this.saveMessageExpansionStates();
+        console.log('[Debug Panel] ✅ CHECKPOINT 2.4: Estados de expansão limpos');
     }
 
     /**
