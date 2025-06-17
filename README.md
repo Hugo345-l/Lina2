@@ -80,24 +80,49 @@ A **personalidade base da Lina** foi implementada e está funcional para convers
 
 ### **🔄 Desenvolvimento Ativo (Tarefas 1.3.1 e 1.4)**
 
-#### **🗄️ CHECKPOINT 1.1 da Tarefa 1.3.1: ✅ CONCLUÍDO (16/06/2025)**
+#### **🧵 TAREFA 1.3.1: Sistema de Threading - PROGRESSO SIGNIFICATIVO**
 
-Completamos com sucesso o **CHECKPOINT 1.1** - Sistema SQLite Checkpointer Otimizado! Esta é uma conquista fundamental que estabelece a base sólida para toda a arquitetura multi-agente futura.
+**✅ CHECKPOINT 1.1: SQLite Checkpointer ✅ CONCLUÍDO (16/06/2025)**
+- 🗄️ **SQLite Database**: `lina-backend/lina_conversations.db` com WAL mode ativo
+- 📊 **Estrutura LangGraph**: MessagesState + AgentState implementado
+- ⚡ **Performance otimizada**: Cache, memory mapping e checkpoint automático
+- 🎯 **Base sólida**: Para threads persistentes e arquitetura multi-agente
 
-**✅ Resultados Alcançados:**
-- **🗄️ SQLite Database criado**: `lina-backend/lina_conversations.db` com WAL mode ativo
-- **📊 Estrutura LangGraph**: MessagesState + AgentState implementado conforme documentação LangChain
-- **⚡ Performance otimizada**: Configurações de cache, memory mapping e checkpoint automático aplicadas
-- **🔧 Backend estável**: Health check, testes e 6 checkpoints salvos durante validação
-- **📁 Organização**: Database movido para dentro da pasta backend para melhor estrutura
+**✅ CHECKPOINT 1.2: Thread ID Management ✅ CONCLUÍDO (16/06/2025)**  
+- 🧵 **Thread ID automático**: Geração e gerenciamento de threads
+- 🔧 **Configuração LangGraph**: Thread config integrada ao sistema
+- 💾 **Persistência funcional**: Conversas separadas por thread no SQLite
+- 🧠 **Memória de conversa**: Teste confirmado - segunda mensagem lembrou da primeira
 
-**🎯 Benefícios Conquistados:**
-- **Threads persistentes**: Base para conversas que sobrevivem a restarts do sistema
-- **Debug granular**: Preparação para tracking por mensagem + sessão acumulada
-- **Escalabilidade**: Fundação pronta para arquitetura Lina-Front → Lina-Memory → Lina-Tools
-- **Observabilidade**: Rastreamento completo via LangSmith + SQLite para análise futura
+**✅ CHECKPOINT 1.3: Debug Info Enriquecido ✅ CONCLUÍDO (16/06/2025)**
+- 🆔 **Message ID único**: Gerado para cada mensagem
+- 🧵 **Thread ID no debug_info**: Incluído em todas as respostas
+- 📊 **Estrutura preparada**: Para expansão multi-agente futura
+- ✅ **Compatibilidade**: Frontend continua funcionando perfeitamente
 
-A **Tarefa 1.3.1** continua nos próximos checkpoints com implementação de thread_id management, debug_info enriquecido, e upgrades da interface para threading.
+**✅ CHECKPOINT 1.4: Endpoint Nova Thread ✅ CONCLUÍDO (16/06/2025)**
+- 🌐 **Endpoint `/chat/new-thread`**: Implementado e funcional
+- 🔄 **Thread management**: Frontend mantém thread_id entre mensagens
+- 💾 **Persistência**: Conversas separadas mantidas no SQLite
+- 🧠 **Memória**: Sistema lembra contexto entre mensagens
+
+**✅ CHECKPOINT 2.1: Interface Nova Conversa ✅ CONCLUÍDO (16/06/2025)**
+- 🎨 **Botão "Nova Conversa"**: Visual clean com ícone 🔄 no header
+- ⚡ **Funcionalidade completa**: Reset thread + métricas + chat visual
+- ⌨️ **Atalho Ctrl/Cmd+N**: Para nova conversa via teclado
+- 📱 **Responsivo**: Texto oculto em mobile (só ícone)
+- 🔄 **Feedback visual**: Botão desabilita + texto "Iniciando..."
+
+**✅ CHECKPOINT 2.2: Display de Thread Info ✅ CONCLUÍDO (16/06/2025)**
+- 🧵 **Thread ID exibido**: Aparece no header após primeira mensagem
+- 🎨 **Formato user-friendly**: **"Thread"** em negrito + últimos 8 chars hex
+- 🔄 **Reset automático**: Desaparece ao iniciar nova conversa
+- 📱 **Design integrado**: Visual discreto no header, não obstrutivo
+- ✅ **Threading funcional**: Backend cria threads separadas no SQLite
+
+**🔄 PRÓXIMOS CHECKPOINTS:**
+- **2.3**: Debug Panel expandível com histórico de mensagens
+- **2.4**: Lógica de reset e tracking completa
 
 O backend receberá configuração do `SqliteSaver` do LangGraph criando arquivo `lina_conversations.db`, modificação do wrapper principal para adicionar parâmetro `thread_id`, enriquecimento do `debug_info` com identificadores de thread e mensagem, e implementação do endpoint `POST /chat/new-thread`. O frontend será atualizado com botão "Nova Conversa", display de thread ID atual, reestruturação do debug panel em seções "Última Mensagem", "Sessão Atual", e futuramente "Histórico Expandível" onde cada mensagem individual poderá ser expandida mostrando request/response JSON completo, métricas detalhadas, e logs de execução.
 

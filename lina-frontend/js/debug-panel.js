@@ -97,6 +97,30 @@ class DebugPanel {
     }
 
     /**
+     * 🧵 CHECKPOINT 1.4: Atualiza informações de thread
+     */
+    updateThreadInfo(threadId) {
+        console.log('[Debug Panel] 🧵 Atualizando thread info:', threadId);
+        
+        // Procurar elemento de thread info (se existir no HTML)
+        const threadElement = document.getElementById('currentThread');
+        if (threadElement) {
+            if (threadId) {
+                // Mostrar apenas parte relevante do thread_id
+                const shortThreadId = threadId.split('_').slice(-2).join('_'); // últimas 2 partes
+                this.updateElement(threadElement, shortThreadId, 'thread');
+            } else {
+                this.updateElement(threadElement, 'Não iniciada', 'warning');
+            }
+        }
+        
+        // Atualizar log no console para debug
+        if (threadId) {
+            console.log(`[Debug Panel] 🧵 Thread ativa: ${threadId}`);
+        }
+    }
+
+    /**
      * Atualiza tempo de sessão
      */
     updateSessionTime() {

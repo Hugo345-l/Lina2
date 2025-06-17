@@ -226,10 +226,162 @@ class LinaAPI {
     "prompt_tokens": 130,
     "completion_tokens": 76,
     "duration": 2.317,
-    "model_name": "google/gemini-2.5-flash-preview-05-20"
+    "model_name": "google/gemini-2.5-flash-preview-05-20",
+    "thread_id": "thread_default_user_2cf207d1",
+    "message_id": "msg_1705709612345"
   }
 }
 ```
+
+#### **Endpoints para Threading**
+- `POST /chat/new-thread`: Criar nova thread de conversa
+- Headers suportados: `X-Thread-ID` para continuar thread existente
+
+---
+
+## 🧵 **SISTEMA DE THREADING (NOVO - 16/06/2025)**
+
+### 📍 Localização: `js/chat.js` + `js/debug-panel.js`
+
+#### **🎯 FUNCIONALIDADE PRINCIPAL**
+O frontend agora suporta **threads persistentes** que mantêm a memória de conversas entre sessões. Cada conversa é uma thread separada salva no SQLite do backend.
+
+#### **🔧 Como Funciona**
+1. **Primeira mensagem**: Frontend automaticamente cria uma nova thread
+2. **Mensagens seguintes**: Continuam na mesma thread mantendo contexto
+3. **Nova conversa**: Usuário pode iniciar nova thread via botão (futuro)
+4. **Persistência**: Threads salvas no SQLite mesmo com restart do backend
+
+#### **📊 Métricas por Thread**
+```javascript
+// Estrutura das métricas
+{
+  currentThread: {
+    id: "thread_default_user_2cf207d1",
+    sessionCost: 0.05,      // Custo acumulado da sessão
+    sessionTokens: 1240,    // Tokens acumulados
+    sessionMessages: 12,    // Número de mensagens
+    sessionTime: 45         // Tempo total da sessão
+  },
+  lastMessage: {
+    cost: 0.001,           // Custo da última mensagem
+    tokens: 206,           // Tokens da última mensagem
+    duration: 2.3,         // Duração da última mensagem
+    model: "gemini-2.5-flash"
+  }
+}
+```
+
+#### **🧠 MEMÓRIA DE CONVERSA CONFIRMADA**
+- ✅ **Teste realizado**: Segunda mensagem lembrou da primeira
+- ✅ **Thread ID persistente**: Mantido entre mensagens
+- ✅ **SQLite checkpointer**: Funcionando perfeitamente
+- ✅ **Debug info enriquecido**: Thread ID visível no painel
+
+#### **🔍 Logs de Threading**
+```javascript
+// Exemplos de logs que você verá no console:
+[Chat] 🧵 Primeira mensagem - criando thread...
+[API] 🧵 Thread criada: thread_default_user_2cf207d1
+[Chat] 🧵 Conversa iniciada com thread: thread_default_user_2cf207d1
+[Debug Panel] 🧵 Thread ativa: thread_default_user_2cf207d1
+```
+
+#### **📱 Interface de Threading**
+- **Thread ID atual**: Exibido discretamente no debug panel
+- **Indicador de sessão**: Métricas acumuladas por thread
+- **Logs detalhados**: Threading visível no console
+- **Status visual**: Indicadores de thread ativa
+
+#### **🔄 BOTÃO "NOVA CONVERSA" (IMPLEMENTADO - 16/06/2025)**
+
+##### **📍 Localização**
+- **HTML**: `index.html` (header entre título e status)
+- **CSS**: `css/chat.css` (seção "Chat Actions")
+- **JavaScript**: `js/app.js` (função `startNewConversation()`)
+
+##### **🎨 Design e Aparência**
+```html
+<button id="newConversationBtn" class="new-conversation-btn">
+  <span class="btn-icon">🔄</span>
+  <span class="btn-text">Nova Conversa</span>
+</button>
+```
+
+##### **🎨 Estilos CSS**
+```css
+.new-conversation-btn {
+  background-color: var(--primary-color);  /* Azul primário */
+  color: white;
+  border-radius: var(--border-radius);
+  hover: transform translateY(-1px);        /* Micro-animação */
+  mobile: só ícone (texto oculto);         /* Responsivo */
+}
+```
+
+##### **⚡ Funcionalidades**
+- **Clique**: Inicia nova thread de conversa
+- **Atalho**: Ctrl/Cmd+N (atalho de teclado)
+- **Feedback visual**: Botão desabilita temporariamente + texto "Iniciando..."
+- **Reset completo**: Limpa chat, reseta thread_id, zera métricas
+- **Auto-focus**: Foca automaticamente no input após reset
+
+##### **🔧 Fluxo Técnico**
+1. **Usuário clica** no botão ou pressiona Ctrl/Cmd+N
+2. **Frontend limpa** interface visualmente
+3. **Thread ID resetado** para `null` (força nova thread)
+4. **Métricas zeradas** no debug panel
+5. **Mensagem de boas-vindas** exibida
+6. **Próxima mensagem** criará automaticamente nova thread no backend
+
+##### **📊 Logs de Funcionamento**
+```javascript
+[App] 🔄 Iniciando nova conversa...
+[App] 🧵 Thread ID limpo - nova thread será criada na próxima mensagem  
+[App] 📊 Métricas de sessão resetadas
+[App] ✅ Nova conversa iniciada com sucesso
+```
+
+#### **🧵 DISPLAY DE THREAD ID (IMPLEMENTADO - 16/06/2025)**
+
+##### **📍 Localização**
+- **HTML**: `index.html` (header após botão Nova Conversa)
+- **CSS**: `css/chat.css` (seção "Thread Info")
+- **JavaScript**: `js/chat.js` (função `updateThreadDisplay()`)
+
+##### **🎨 Design e Aparência**
+```html
+<div class="thread-info" id="threadInfo" style="display: none;">
+  <span class="thread-label"><strong>Thread</strong></span>
+  <span class="thread-id" id="currentThreadId">-</span>
+</div>
+```
+
+##### **⚡ Funcionalidades**
+- **Exibição automática**: Aparece após primeira mensagem ser enviada
+- **Formato user-friendly**: Mostra últimos 8 caracteres hex do thread ID
+- **Reset automático**: Desaparece ao iniciar nova conversa
+- **Responsividade**: Design integrado ao header
+
+##### **📊 Exemplo de Funcionamento**
+```javascript
+// Thread ID completo: "thread_default_user_b728dbf3"
+// Exibido como: "Thread b728dbf3"
+[Chat] 🧵 Thread ID exibido: b728dbf3
+[Chat] 🧵 Thread ID ocultado  // Ao resetar
+```
+
+##### **🎨 Visual**
+- **Label**: **"Thread"** em negrito (alterado de ícone 🧵)
+- **ID**: Formato hex user-friendly
+- **Posicionamento**: Discreto no header, não obstrutivo
+- **Estado**: Visível apenas quando thread ativa
+
+#### **🚀 Funcionalidades Futuras Preparadas**
+- **Lista de threads**: Histórico de conversas
+- **Thread naming**: Nomes personalizados para threads
+- **Thread management**: UI para gerenciar múltiplas conversas
+- **Thread info display**: Mostrar thread_id atual no header
 
 ---
 

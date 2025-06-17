@@ -83,7 +83,8 @@ class LinaApp {
             'sendButton',
             'chatForm',
             'debugPanel',
-            'toggleDebug'
+            'toggleDebug',
+            'newConversationBtn'
         ];
 
         for (const elementId of requiredElements) {
@@ -119,6 +120,14 @@ class LinaApp {
      * Configura event listeners globais
      */
     setupGlobalListeners() {
+        // Event listener para botão "Nova Conversa"
+        const newConversationBtn = document.getElementById('newConversationBtn');
+        if (newConversationBtn) {
+            newConversationBtn.addEventListener('click', () => {
+                this.startNewConversation();
+            });
+        }
+
         // Atalhos de teclado
         document.addEventListener('keydown', (e) => {
             // Ctrl+K ou Cmd+K para focar no input
@@ -131,6 +140,12 @@ class LinaApp {
             if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
                 e.preventDefault();
                 this.debugPanel.togglePanel();
+            }
+            
+            // Ctrl+N ou Cmd+N para nova conversa
+            if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+                e.preventDefault();
+                this.startNewConversation();
             }
             
             // Escape para limpar input
@@ -211,6 +226,63 @@ class LinaApp {
         console.log('%c   • window.chatManager: Gerenciador de chat', 'color: #64748b;');
         console.log('%c   • window.debugPanel: Painel de debug', 'color: #64748b;');
         console.log('%c   • window.linaAPI: Cliente da API', 'color: #64748b;');
+    }
+
+    /**
+     * Inicia uma nova conversa (nova thread)
+     */
+    async startNewConversation() {
+        console.log('[App] 🔄 Iniciando nova conversa...');
+        
+        try {
+            // Mostrar feedback visual no botão
+            const newConversationBtn = document.getElementById('newConversationBtn');
+            if (newConversationBtn) {
+                newConversationBtn.disabled = true;
+                const originalText = newConversationBtn.querySelector('.btn-text').textContent;
+                newConversationBtn.querySelector('.btn-text').textContent = 'Iniciando...';
+                
+                // Restaurar após 1 segundo
+                setTimeout(() => {
+                    newConversationBtn.disabled = false;
+                    newConversationBtn.querySelector('.btn-text').textContent = originalText;
+                }, 1000);
+            }
+            
+            // Limpar chat visualmente
+            if (this.chatManager) {
+                this.chatManager.clearChat();
+                // Limpar thread_id atual para forçar criação de nova thread
+                this.chatManager.currentThreadId = null;
+                console.log('[App] 🧵 Thread ID limpo - nova thread será criada na próxima mensagem');
+            }
+            
+            // Resetar métricas da sessão
+            if (this.debugPanel) {
+                this.debugPanel.resetSession();
+                console.log('[App] 📊 Métricas de sessão resetadas');
+            }
+            
+            // Mostrar mensagem de boas-vindas da nova conversa
+            if (this.chatManager) {
+                this.chatManager.addMessage(
+                    '👋 Nova conversa iniciada! Como posso ajudar você hoje?', 
+                    'system'
+                );
+            }
+            
+            // Focar no input para o usuário começar
+            const messageInput = document.getElementById('messageInput');
+            if (messageInput) {
+                messageInput.focus();
+            }
+            
+            console.log('[App] ✅ Nova conversa iniciada com sucesso');
+            
+        } catch (error) {
+            console.error('[App] ❌ Erro ao iniciar nova conversa:', error);
+            this.showError('Erro ao iniciar nova conversa');
+        }
     }
 
     /**

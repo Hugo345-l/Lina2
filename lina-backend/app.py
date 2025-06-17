@@ -161,6 +161,10 @@ class DebugInfo(BaseModel):
     completion_tokens: int = 0
     duration: float = 0.0
     model_name: Optional[str] = None
+    # 🧵 CHECKPOINT 1.2: Adicionar thread_id e message_id ao debug_info
+    thread_id: Optional[str] = None
+    message_id: Optional[str] = None
+    message_sequence: Optional[int] = None
 
 class ChatResponse(BaseModel):
     output: str  # APENAS a mensagem da Lina
@@ -188,7 +192,9 @@ def get_llm():
             temperature=0.8
         )
 
-# Prompt template
+# Prompt template - CORRIGIDO para usar MessagesPlaceholder
+from langchain_core.prompts import MessagesPlaceholder
+
 LINA_PROMPT = ChatPromptTemplate.from_messages([
     ("system", """Você é Lina, um assistente pessoal inteligente e proativa! 
      Você nasceu pq a Sogrinha Maravilhosa do Hugo Pediu e ele está te criando aos poucos, 
@@ -202,7 +208,7 @@ Características da sua personalidade:
 - Sempre responde em português brasileiro
 
 Responda de forma clara, útil e concisa."""),
-    ("human", "{input}")
+    MessagesPlaceholder(variable_name="messages")
 ])
 
 # Função de cálculo de custo
@@ -290,26 +296,27 @@ class AgentState(MessagesState):
     debug_info: dict = {}
 
 def chat_node(state: AgentState) -> dict:
-    """Nó principal do chat conforme padrão LangChain"""
+    """Nó principal do chat conforme padrão LangChain - CORRIGIDO para usar histórico completo"""
     
     # Extrair mensagens do estado (MessagesState format)
     messages = state.get("messages", [])
     if not messages:
         return {"messages": [AIMessage(content="Olá! Como posso ajudar?")]}
     
-    # Pegar a última mensagem (deve ser HumanMessage)
+    # Pegar a última mensagem para logging
     last_message = messages[-1]
     user_input = last_message.content if hasattr(last_message, 'content') else str(last_message)
     
     print(f"[DEBUG] Chat node processing: {user_input[:50]}...")
+    print(f"[DEBUG] Total messages in history: {len(messages)}")
     
-    # Executar chain com LLM
+    # 🧠 CORREÇÃO: Passar TODAS as mensagens para o LLM (não só a última)
     try:
         llm = get_llm()
         chain = LINA_PROMPT | llm
         
-        # Invocar com input estruturado
-        ai_message = chain.invoke({"input": user_input})
+        # 🧠 INVOCAR COM HISTÓRICO COMPLETO usando MessagesPlaceholder
+        ai_message = chain.invoke({"messages": messages})
         
         # Extrair metadados para debug
         metadata = getattr(ai_message, 'response_metadata', {})
@@ -329,6 +336,7 @@ def chat_node(state: AgentState) -> dict:
         }
         
         print(f"[DEBUG] Chat node completed - tokens: {debug_info['tokens_used']}")
+        print(f"[DEBUG] 🧠 MEMÓRIA: Processadas {len(messages)} mensagens do histórico")
         
         # Retornar state update conforme padrão
         return {
@@ -377,32 +385,46 @@ print(f"🗄️ Conversation graph criado: {conversation_graph is not None}")
 basic_chain = LINA_PROMPT | get_llm()
 langserve_chain_core = basic_chain | RunnableLambda(format_response_with_debug_info)
 
-# WRAPPER LANGSERVE COMPATÍVEL (TAREFA 1.3.1 - ETAPA 3)
-def lina_api_wrapper(input_data: dict) -> dict:
-    """Wrapper LangServe compatível que usa StateGraph com checkpointing otimizado"""
-    start_time = time.time()
+# 🧵 THREAD MANAGEMENT ROBUSTO (Baseado na documentação LangChain)
+import uuid
+from datetime import datetime, timedelta
+from typing import Optional, Dict, List
 
-    # Extrair mensagem do usuário
-    user_message = ""
-    if isinstance(input_data, dict):
-        if "input" in input_data:
-            if isinstance(input_data["input"], str):
-                user_message = input_data["input"]
-            elif isinstance(input_data["input"], dict) and "input" in input_data["input"]:
-                user_message = input_data["input"]["input"]
-            else:
-                user_message = str(input_data["input"])
-        else:
-            user_message = str(input_data)
-    else:
-        user_message = str(input_data)
-
-    print(f"[DEBUG] Wrapper processing: {user_message[:50]}...")
-
-    # 🗄️ USAR LANGGRAPH COM CHECKPOINTER OTIMIZADO
-    try:
-        # Configuração completa do thread conforme documentação
-        thread_id = f"thread_{int(time.time())}"
+class ThreadManager:
+    """Gerenciador de threads de conversação conforme padrão LangChain"""
+    
+    def __init__(self, checkpointer):
+        self.checkpointer = checkpointer
+    
+    def create_thread(self, user_id: str, metadata: dict = None) -> tuple[str, dict]:
+        """Cria nova thread de conversação"""
+        
+        thread_id = f"thread_{user_id}_{uuid.uuid4().hex[:8]}"
+        
+        # Metadados da thread
+        thread_metadata = {
+            "user_id": user_id,
+            "created_at": datetime.now().isoformat(),
+            "title": "Nova Conversa",
+            "message_count": 0,
+            **(metadata or {})
+        }
+        
+        # Configuração inicial
+        config = {
+            "configurable": {
+                "thread_id": thread_id,
+                "checkpoint_ns": "",
+                "checkpoint_id": None
+            },
+            "metadata": thread_metadata
+        }
+        
+        print(f"[DEBUG] Created new thread: {thread_id} for user: {user_id}")
+        return thread_id, config
+    
+    def get_thread_config(self, thread_id: str, user_id: str = None) -> dict:
+        """Obtém configuração da thread"""
         config = {
             "configurable": {
                 "thread_id": thread_id,
@@ -410,6 +432,171 @@ def lina_api_wrapper(input_data: dict) -> dict:
                 "checkpoint_id": None
             }
         }
+        
+        if user_id:
+            config["metadata"] = {"user_id": user_id}
+        
+        return config
+    
+    def validate_thread_access(self, thread_id: str, user_id: str) -> bool:
+        """Valida se usuário tem acesso à thread"""
+        # Extrair user_id do thread_id
+        try:
+            parts = thread_id.split('_')
+            if len(parts) >= 3:
+                thread_user_id = parts[1]
+                return thread_user_id == user_id
+        except:
+            pass
+        return False
+
+def generate_thread_id(user_id: str) -> str:
+    """Gera thread_id único seguindo padrão do documento"""
+    timestamp = datetime.now().strftime("%y%m%d_%H%M%S")
+    short_uuid = str(uuid.uuid4())[:8]
+    return f"thread_{user_id}_{timestamp}_{short_uuid}"
+
+# Instância global do ThreadManager
+thread_manager = ThreadManager(checkpointer) if checkpointer else None
+
+# 🧵 CHECKPOINT 1.3: Endpoint para Nova Thread (TAREFA 1.3.1)
+class NewThreadRequest(BaseModel):
+    user_id: str = "default_user"  # Default para desenvolvimento
+    metadata: Optional[Dict[str, Any]] = None
+
+class NewThreadResponse(BaseModel):
+    success: bool
+    thread_id: str
+    message: str
+    timestamp: str
+    user_id: str
+
+@app.post("/chat/new-thread", response_model=NewThreadResponse)
+async def create_new_thread(request: NewThreadRequest):
+    """
+    Endpoint para criar nova thread e limpar estado da conversa
+    Conforme padrão LangChain documentado
+    """
+    try:
+        if not thread_manager:
+            return NewThreadResponse(
+                success=False,
+                thread_id="",
+                message="ThreadManager não disponível - checkpointer desabilitado",
+                timestamp=datetime.now().isoformat(),
+                user_id=request.user_id
+            )
+        
+        # Criar nova thread usando ThreadManager
+        thread_id, config = thread_manager.create_thread(
+            user_id=request.user_id,
+            metadata=request.metadata
+        )
+        
+        print(f"[DEBUG] New thread endpoint - created: {thread_id} for user: {request.user_id}")
+        
+        return NewThreadResponse(
+            success=True,
+            thread_id=thread_id,
+            message="Nova thread criada com sucesso",
+            timestamp=datetime.now().isoformat(),
+            user_id=request.user_id
+        )
+        
+    except Exception as e:
+        print(f"[ERROR] New thread endpoint error: {e}")
+        return NewThreadResponse(
+            success=False,
+            thread_id="",
+            message=f"Erro ao criar thread: {str(e)}",
+            timestamp=datetime.now().isoformat(),
+            user_id=request.user_id
+        )
+
+# 🧵 CHECKPOINT 1.3: Endpoint para Listar Threads do Usuário (BONUS)
+class ListThreadsResponse(BaseModel):
+    success: bool
+    threads: List[Dict[str, Any]]
+    user_id: str
+    total: int
+
+@app.get("/chat/threads/{user_id}", response_model=ListThreadsResponse)
+async def list_user_threads(user_id: str, limit: int = 20):
+    """Lista threads do usuário (implementação futura completa)"""
+    try:
+        # Por enquanto, retorna apenas informação básica
+        # TODO: Implementar busca real no checkpointer
+        
+        return ListThreadsResponse(
+            success=True,
+            threads=[],  # Será implementado quando tivermos mais dados
+            user_id=user_id,
+            total=0
+        )
+        
+    except Exception as e:
+        print(f"[ERROR] List threads error: {e}")
+        return ListThreadsResponse(
+            success=False,
+            threads=[],
+            user_id=user_id,
+            total=0
+        )
+
+# WRAPPER LANGSERVE COMPATÍVEL COM THREAD ID MANAGEMENT (TAREFA 1.3.1 - CHECKPOINT 1.2)
+def lina_api_wrapper(input_data: dict) -> dict:
+    """Wrapper LangServe compatível que usa StateGraph com checkpointing otimizado e thread ID management"""
+    start_time = time.time()
+
+    # 🧵 EXTRAIR OU GERAR THREAD_ID (CHECKPOINT 1.2)
+    thread_id = None
+    user_message = ""
+    
+    if isinstance(input_data, dict):
+        # Tentar extrair thread_id se fornecido
+        thread_id = input_data.get("thread_id")
+        
+        # Extrair mensagem do usuário
+        if "input" in input_data:
+            if isinstance(input_data["input"], str):
+                user_message = input_data["input"]
+            elif isinstance(input_data["input"], dict):
+                if "input" in input_data["input"]:
+                    user_message = input_data["input"]["input"]
+                # Também tentar extrair thread_id do input aninhado
+                if not thread_id and "thread_id" in input_data["input"]:
+                    thread_id = input_data["input"]["thread_id"]
+            else:
+                user_message = str(input_data["input"])
+        else:
+            user_message = str(input_data)
+    else:
+        user_message = str(input_data)
+
+    # 🧵 GERAR THREAD_ID AUTOMATICAMENTE SE NÃO FORNECIDO (CHECKPOINT 1.2)
+    if not thread_id:
+        thread_id = generate_thread_id()
+        print(f"[DEBUG] Generated new thread_id: {thread_id}")
+    else:
+        print(f"[DEBUG] Using provided thread_id: {thread_id}")
+
+    # 🧵 GERAR MESSAGE_ID ÚNICO (CHECKPOINT 1.2)
+    message_id = f"msg_{datetime.now().strftime('%H%M%S')}_{str(uuid.uuid4())[:8]}"
+    
+    print(f"[DEBUG] Wrapper processing: {user_message[:50]}... (thread: {thread_id[:20]}..., msg: {message_id})")
+
+    # 🗄️ USAR LANGGRAPH COM CHECKPOINTER OTIMIZADO E THREAD CONFIGURADO
+    try:
+        # 🧵 CONFIGURAÇÃO COMPLETA DO THREAD CONFORME DOCUMENTAÇÃO (CHECKPOINT 1.2)
+        config = {
+            "configurable": {
+                "thread_id": thread_id,
+                "checkpoint_ns": "",
+                "checkpoint_id": None
+            }
+        }
+        
+        print(f"[DEBUG] LangGraph config: {config}")
         
         # Estado inicial com HumanMessage (MessagesState format)
         initial_state = {
@@ -478,14 +665,22 @@ def lina_api_wrapper(input_data: dict) -> dict:
             "model_name": "unknown"
         }
 
-    # Construir resposta final
+    # 🧵 CHECKPOINT 1.2: Incluir thread_id, message_id e sequence no debug_info final
+    # Calcular sequence baseado nas mensagens existentes no thread (futuro)
+    message_sequence = 1  # Por enquanto, será implementado sequence counting no próximo checkpoint
+    
+    # Construir resposta final com thread metadata
     final_debug_info = DebugInfo(
         cost=debug_info_partial.get("cost", 0.0),
         tokens_used=debug_info_partial.get("tokens_used", 0),
         prompt_tokens=debug_info_partial.get("prompt_tokens", 0),
         completion_tokens=debug_info_partial.get("completion_tokens", 0),
         model_name=debug_info_partial.get("model_name", "unknown"),
-        duration=round(duration_seconds, 3)
+        duration=round(duration_seconds, 3),
+        # 🧵 Thread metadata (CHECKPOINT 1.2)
+        thread_id=thread_id,
+        message_id=message_id,
+        message_sequence=message_sequence
     )
 
     # Garantir que output é string limpa

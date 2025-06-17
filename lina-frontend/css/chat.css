@@ -52,6 +52,78 @@
     color: var(--text-secondary);
 }
 
+/* === Chat Actions === */
+.chat-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.new-conversation-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-md);
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.new-conversation-btn:hover {
+    background-color: var(--primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.new-conversation-btn:active {
+    transform: translateY(0);
+}
+
+.new-conversation-btn .btn-icon {
+    font-size: 11px;
+    opacity: 0.9;
+}
+
+.new-conversation-btn .btn-text {
+    font-size: 11px;
+}
+
+/* === Thread Info === */
+.thread-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 11px;
+    color: var(--text-secondary);
+    max-width: 150px;
+    overflow: hidden;
+}
+
+.thread-label {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+
+.thread-id {
+    font-family: 'Courier New', monospace;
+    font-size: 10px;
+    color: var(--text-primary);
+    font-weight: 500;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
 /* === Chat Messages === */
 .chat-messages {
     flex: 1;
@@ -282,6 +354,24 @@
     
     .chat-title h1 {
         font-size: 20px;
+    }
+    
+    .new-conversation-btn .btn-text {
+        display: none;
+    }
+    
+    .new-conversation-btn {
+        padding: var(--spacing-xs);
+        min-width: 32px;
+        justify-content: center;
+    }
+    
+    .thread-info {
+        max-width: 120px;
+    }
+    
+    .thread-info .thread-label {
+        display: none;
     }
     
     .chat-messages {

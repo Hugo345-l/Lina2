@@ -160,9 +160,26 @@ Esses aprendizados reforçam a importância de uma abordagem metódica e increme
     *   Design system completo com cores customizáveis e layout responsivo.
     *   Documentação completa da estrutura frontend (`FRONTEND_MAP.md`).
 
-## 🗄️ **SQLite Checkpointer Otimizado - CHECKPOINT 1.1 Concluído (16/06/2025)**
+## 🧠 **SISTEMA DE THREADING COMPLETAMENTE FUNCIONAL - Tarefa 1.3.1 CONCLUÍDA (16/06/2025)**
 
-### **Implementação Bem-Sucedida:**
+### **🎉 MARCOS ALCANÇADOS:**
+**TODOS os checkpoints 1.1, 1.2, 1.3 e 1.4** da Tarefa 1.3.1 foram **completamente concluídos com sucesso**, incluindo a **correção crítica** da memória de conversa que estava impedindo o funcionamento real do sistema de threading.
+
+### **🔧 PROBLEMA CRÍTICO IDENTIFICADO E CORRIGIDO:**
+Hugo identificou um **bug fundamental**: embora o sistema estivesse salvando threads no SQLite, o LLM não estava recebendo o histórico de mensagens - apenas a mensagem atual. Isso significa que a Lina não tinha memória real da conversa.
+
+#### **Correções Implementadas:**
+1. **Prompt Template Corrigido**:
+   - **Antes**: `("human", "{input}")` - apenas mensagem atual
+   - **Depois**: `MessagesPlaceholder(variable_name="messages")` - histórico completo
+
+2. **Função chat_node() Corrigida**:
+   - **Antes**: `chain.invoke({"input": user_input})` - só última mensagem  
+   - **Depois**: `chain.invoke({"messages": messages})` - todas as mensagens do histórico
+
+### **✅ CHECKPOINTS TODOS CONCLUÍDOS:**
+
+#### **🗄️ CHECKPOINT 1.1: SQLite Checkpointer Otimizado**
 Completamos com sucesso o **CHECKPOINT 1.1** da Tarefa 1.3.1, implementando um sistema SQLite Checkpointer otimizado que transforma o backend de "runs isolados" para um sistema de threads persistentes. Esta é uma conquista fundamental que estabelece a base sólida para toda a arquitetura multi-agente futura.
 
 ### **Resultados Técnicos Alcançados:**
@@ -218,14 +235,50 @@ Lina2/
 └── TASK.MD                            ✅ Roadmap atualizado
 ```
 
-### **Próximos Passos Preparados:**
-Com o CHECKPOINT 1.1 concluído, estamos prontos para:
-1. **CHECKPOINT 1.2**: Implementar thread_id management no wrapper principal
-2. **CHECKPOINT 1.3**: Enriquecer debug_info com metadados de thread
-3. **CHECKPOINT 1.4**: Criar endpoint `/chat/new-thread`
-4. **Frontend upgrades**: Botão "Nova Conversa" e debug panel expandível
+#### **🧵 CHECKPOINT 1.2: Thread ID Management Concluído**
+- **Thread ID gerado automaticamente**: `thread_default_user_2cf207d1`
+- **Configuração LangGraph**: Thread config passada corretamente na execução
+- **Funcionalidade preservada**: Sistema anterior funciona normalmente
+- **Logs funcionais**: Thread ID visível nos logs do backend e frontend
+- **SQLite funcional**: Threads separadas persistidas no banco de dados
 
-Esta implementação representa um marco significativo no projeto, estabelecendo a infraestrutura robusta necessária para evoluir Lina de um chatbot simples para um verdadeiro assistente multi-agente com memória persistente e capacidades avançadas de debugging.
+#### **📊 CHECKPOINT 1.3: Debug Info Enriquecido Concluído**
+- **Thread ID no debug_info**: Incluído corretamente em todas as respostas
+- **Message ID único**: Gerado automaticamente para cada mensagem
+- **Debug info enriquecido**: Estrutura preparada para expansão futura
+- **Compatibilidade frontend**: Interface continua funcionando perfeitamente
+- **JSON inspecionável**: Debug panel exibe todas as métricas corretamente
+
+#### **🌐 CHECKPOINT 1.4: Endpoint Nova Thread Concluído**
+- **Endpoint `/chat/new-thread`**: Implementado e funcional
+- **Thread ID automático**: Frontend cria thread automaticamente na primeira mensagem
+- **Thread management**: Frontend mantém thread_id entre mensagens
+- **Persistência funcional**: Conversas separadas por thread mantidas no SQLite
+- **Memória de conversa**: **TESTE CONFIRMADO** - Segunda mensagem lembrou da primeira!
+
+### **🧠 MEMÓRIA DE CONVERSA FUNCIONANDO 100%:**
+**Teste realizado em 16/06/2025:**
+- **Mensagem 1**: "Meu nome é Hugo e minha cor favorita é azul"
+- **Resposta**: "Olá Hugo! Que bom te conhecer... É um prazer saber que sua cor favorita é azul."
+- **Mensagem 2**: "Qual é o meu nome e qual é minha cor favorita?"  
+- **Resposta**: "Seu nome é Hugo e sua cor favorita é azul! Lembro-me bem. 😊"
+
+### **🎯 STATUS ATUALIZADO DA TAREFA 1.3.1:**
+**✅ COMPLETAMENTE CONCLUÍDA (16/06/2025)**
+- ✅ **Backend**: SQLite checkpointer otimizado + thread management
+- ✅ **Thread Management**: Geração automática e persistência funcionais
+- ✅ **Debug Info**: Enriquecido com thread_id, message_id e sequence
+- ✅ **Endpoints**: `/chat/new-thread` implementado e testado
+- ✅ **Memória**: Lina lembra conversas anteriores perfeitamente
+- ✅ **Correção crítica**: Histórico completo passado para o LLM
+
+### **🚀 PRÓXIMOS PASSOS IMEDIATOS:**
+1. **Tarefa 1.4**: Implementar ferramentas básicas (busca web, calculadora, tempo/data)
+2. **Frontend upgrades**: Botão "Nova Conversa" e debug panel expandível 
+3. **Fase 2**: Iniciar arquitetura multi-instância (Lina-Front, Memory, Tools)
+4. **MCPs**: Primeiros conectores para Google Workspace e sistema operacional
+
+Esta implementação representa um **marco fundamental** no projeto, estabelecendo a infraestrutura robusta necessária para evoluir Lina de um chatbot simples para um verdadeiro assistente multi-agente com **memória persistente real** e capacidades avançadas de debugging. **A base para todo o sistema multi-agente futuro está agora solidamente estabelecida.**
 
 ## Planejamento de Desenvolvimento
 

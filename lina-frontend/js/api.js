@@ -1,6 +1,7 @@
 /**
  * API Client para comunicação com o backend Lina
  * Gerencia todas as chamadas HTTP para o LangServe
+ * 🧵 CHECKPOINT 1.4: Incluindo Thread Management
  */
 
 class LinaAPI {
@@ -9,6 +10,10 @@ class LinaAPI {
         this.headers = {
             'Content-Type': 'application/json;charset=utf-8'
         };
+        
+        // 🧵 CHECKPOINT 1.4: Thread Management
+        this.currentThreadId = null;
+        this.userId = 'default_user'; // Por enquanto usuário fixo
     }
 
     /**
@@ -35,19 +40,70 @@ class LinaAPI {
     }
 
     /**
-     * Envia mensagem para a Lina via LangServe
-     * @param {string} message - Mensagem do usuário
-     * @returns {Promise<{output: string, debug_info: object}>}
+     * 🧵 CHECKPOINT 1.4: Cria nova thread de conversação
+     * @param {string} userId - ID do usuário
+     * @param {object} metadata - Metadados opcionais da thread
+     * @returns {Promise<{success: boolean, thread_id: string}>}
      */
-    async sendMessage(message) {
+    async createNewThread(userId = null, metadata = null) {
         try {
             const payload = {
+                user_id: userId || this.userId,
+                metadata: metadata
+            };
+
+            console.log('[API] 🧵 Criando nova thread:', payload);
+
+            const response = await fetch(`${this.baseURL}/chat/new-thread`, {
+                method: 'POST',
+                headers: this.headers,
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('[API] 🧵 Thread criada:', data);
+
+            if (data.success && data.thread_id) {
+                this.currentThreadId = data.thread_id;
+                console.log('[API] 🧵 Thread ID armazenado:', this.currentThreadId);
+            }
+
+            return data;
+
+        } catch (error) {
+            console.error('[API] 🧵 Erro ao criar thread:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 🧵 CHECKPOINT 1.4: Envia mensagem mantendo thread de conversação
+     * @param {string} message - Mensagem do usuário
+     * @param {string} threadId - ID da thread (opcional, usa currentThreadId se não fornecido)
+     * @returns {Promise<{output: string, debug_info: object}>}
+     */
+    async sendMessage(message, threadId = null) {
+        try {
+            // 🧵 CHECKPOINT 1.4: Usar thread_id se disponível
+            const useThreadId = threadId || this.currentThreadId;
+            
+            const payload = {
                 input: {
-                    input: message
+                    input: message,
+                    // 🧵 Incluir thread_id no payload
+                    ...(useThreadId && { thread_id: useThreadId })
                 }
             };
 
-            console.log('[API] Enviando mensagem:', { message, payload });
+            console.log('[API] 🧵 Enviando mensagem com thread:', { 
+                message, 
+                thread_id: useThreadId, 
+                payload 
+            });
 
             const response = await fetch(`${this.baseURL}/chat/invoke`, {
                 method: 'POST',
@@ -77,6 +133,12 @@ class LinaAPI {
             console.log('[API] Tipo de output:', typeof actualData.output);
             console.log('[API] Tipo de debug_info:', typeof actualData.debug_info);
 
+            // 🧵 CHECKPOINT 1.4: Atualizar thread_id se retornado no debug_info
+            if (actualData.debug_info && actualData.debug_info.thread_id) {
+                this.currentThreadId = actualData.debug_info.thread_id;
+                console.log('[API] 🧵 Thread ID atualizado:', this.currentThreadId);
+            }
+
             // Validar estrutura da resposta
             if (!actualData || typeof actualData !== 'object') {
                 console.error('[API] Dados inválidos:', actualData);
@@ -102,6 +164,44 @@ class LinaAPI {
             console.error('[API] Erro ao enviar mensagem:', error);
             throw error;
         }
+    }
+
+    /**
+     * 🧵 CHECKPOINT 1.4: Inicia nova conversa (limpa thread atual)
+     * @returns {Promise<{success: boolean, thread_id: string}>}
+     */
+    async startNewConversation() {
+        try {
+            console.log('[API] 🧵 Iniciando nova conversa...');
+            
+            const result = await this.createNewThread();
+            
+            if (result.success) {
+                console.log('[API] 🧵 Nova conversa iniciada com thread:', result.thread_id);
+            }
+            
+            return result;
+            
+        } catch (error) {
+            console.error('[API] 🧵 Erro ao iniciar nova conversa:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 🧵 CHECKPOINT 1.4: Obtém thread ID atual
+     * @returns {string|null}
+     */
+    getCurrentThreadId() {
+        return this.currentThreadId;
+    }
+
+    /**
+     * 🧵 CHECKPOINT 1.4: Reseta thread atual
+     */
+    resetThread() {
+        console.log('[API] 🧵 Resetando thread atual');
+        this.currentThreadId = null;
     }
 
     /**

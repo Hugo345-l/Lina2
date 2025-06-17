@@ -1,6 +1,7 @@
 /**
  * Gerenciador da interface de chat
  * Controla mensagens, input e interações do usuário
+ * 🧵 CHECKPOINT 1.4: Incluindo Thread Management
  */
 
 class ChatManager {
@@ -13,6 +14,10 @@ class ChatManager {
         
         this.messageCount = 0;
         this.isProcessing = false;
+        
+        // 🧵 CHECKPOINT 1.4: Thread Management
+        this.currentThreadId = null;
+        this.conversationStarted = false;
         
         this.init();
     }
@@ -60,11 +65,17 @@ class ChatManager {
     }
 
     /**
-     * Envia mensagem para a Lina
+     * 🧵 CHECKPOINT 1.4: Envia mensagem para a Lina com thread management
      */
     async sendMessage(message) {
         try {
             this.setProcessing(true);
+            
+            // 🧵 CHECKPOINT 1.4: Iniciar thread se for primeira mensagem
+            if (!this.conversationStarted) {
+                console.log('[Chat] 🧵 Primeira mensagem - criando thread...');
+                await this.startNewConversation();
+            }
             
             // Adicionar mensagem do usuário
             this.addMessage(message, 'user');
@@ -76,11 +87,18 @@ class ChatManager {
             // Mostrar indicador de digitação
             const typingId = this.showTypingIndicator();
             
-            // Enviar para API
-            const response = await window.linaAPI.sendMessage(message);
+            // 🧵 CHECKPOINT 1.4: Enviar para API com thread ID
+            const response = await window.linaAPI.sendMessage(message, this.currentThreadId);
             
             // Remover indicador de digitação
             this.removeTypingIndicator(typingId);
+            
+            // 🧵 CHECKPOINT 1.4: Atualizar thread ID se retornado
+            if (response.debug_info && response.debug_info.thread_id) {
+                this.currentThreadId = response.debug_info.thread_id;
+                console.log('[Chat] 🧵 Thread ID atualizado:', this.currentThreadId);
+                this.updateThreadDisplay();
+            }
             
             // Adicionar resposta da Lina
             this.addMessage(response.output, 'assistant');
@@ -105,6 +123,37 @@ class ChatManager {
         } finally {
             this.setProcessing(false);
             this.messageInput.focus();
+        }
+    }
+
+    /**
+     * 🧵 CHECKPOINT 1.4: Inicia nova conversa com thread
+     */
+    async startNewConversation() {
+        try {
+            console.log('[Chat] 🧵 Iniciando nova conversa...');
+            
+            const result = await window.linaAPI.startNewConversation();
+            
+            if (result.success) {
+                this.currentThreadId = result.thread_id;
+                this.conversationStarted = true;
+                console.log('[Chat] 🧵 Conversa iniciada com thread:', this.currentThreadId);
+                
+                // Atualizar debug panel com thread ID
+                if (window.debugPanel) {
+                    window.debugPanel.updateThreadInfo(this.currentThreadId);
+                }
+            } else {
+                console.error('[Chat] 🧵 Erro ao iniciar conversa:', result.message);
+                throw new Error(result.message || 'Erro ao criar thread');
+            }
+            
+        } catch (error) {
+            console.error('[Chat] 🧵 Erro ao iniciar nova conversa:', error);
+            // Permitir continuar sem thread (fallback)
+            this.conversationStarted = true;
+            throw error;
         }
     }
 
@@ -223,9 +272,11 @@ class ChatManager {
     }
 
     /**
-     * Limpa o chat
+     * 🧵 CHECKPOINT 1.4: Limpa o chat e reseta thread
      */
     clearChat() {
+        console.log('[Chat] 🧵 Limpando chat e resetando thread...');
+        
         // Manter apenas a mensagem de boas-vindas
         const systemMessage = this.messagesContainer.querySelector('.system-message');
         this.messagesContainer.innerHTML = '';
@@ -233,11 +284,91 @@ class ChatManager {
             this.messagesContainer.appendChild(systemMessage);
         }
         
+        // 🧵 CHECKPOINT 1.4: Reset thread state
+        this.currentThreadId = null;
+        this.conversationStarted = false;
         this.messageCount = 0;
+        
+        // 🧵 CHECKPOINT 2.2: Ocultar thread ID display
+        this.updateThreadDisplay();
+        
+        // Reset API thread
+        if (window.linaAPI) {
+            window.linaAPI.resetThread();
+        }
         
         if (window.debugPanel) {
             window.debugPanel.updateSessionCount(0);
+            window.debugPanel.updateThreadInfo(null);
         }
+        
+        console.log('[Chat] 🧵 Chat limpo e thread resetada');
+    }
+
+    /**
+     * 🧵 CHECKPOINT 1.4: Força nova conversa (reset completo)
+     */
+    async forceNewConversation() {
+        try {
+            console.log('[Chat] 🧵 Forçando nova conversa...');
+            
+            this.clearChat();
+            
+            // Forçar criação de nova thread na próxima mensagem
+            this.conversationStarted = false;
+            
+            console.log('[Chat] 🧵 Preparado para nova conversa');
+            
+        } catch (error) {
+            console.error('[Chat] 🧵 Erro ao forçar nova conversa:', error);
+        }
+    }
+
+    /**
+     * 🧵 CHECKPOINT 2.2: Atualiza exibição do Thread ID no header
+     */
+    updateThreadDisplay() {
+        const threadInfo = document.getElementById('threadInfo');
+        const threadIdElement = document.getElementById('currentThreadId');
+        
+        if (this.currentThreadId) {
+            // Formatar thread ID para exibição user-friendly
+            const displayId = this.formatThreadIdForDisplay(this.currentThreadId);
+            threadIdElement.textContent = displayId;
+            threadInfo.style.display = 'flex';
+            console.log('[Chat] 🧵 Thread ID exibido:', displayId);
+        } else {
+            threadInfo.style.display = 'none';
+            console.log('[Chat] 🧵 Thread ID ocultado');
+        }
+    }
+
+    /**
+     * 🧵 CHECKPOINT 2.2: Formata Thread ID para exibição amigável
+     */
+    formatThreadIdForDisplay(threadId) {
+        if (!threadId) return '-';
+        
+        // Extrair parte relevante do thread ID
+        // Ex: "thread_default_user_2cf207d1" -> "2cf207d1"
+        const match = threadId.match(/_([a-f0-9]{8})$/);
+        if (match) {
+            return match[1];
+        }
+        
+        // Fallback: últimos 8 caracteres
+        return threadId.slice(-8);
+    }
+
+    /**
+     * 🧵 CHECKPOINT 1.4: Obtém informações da thread atual
+     */
+    getThreadInfo() {
+        return {
+            currentThreadId: this.currentThreadId,
+            conversationStarted: this.conversationStarted,
+            messageCount: this.messageCount
+        };
     }
 
     /**
@@ -246,7 +377,10 @@ class ChatManager {
     getStats() {
         return {
             messageCount: this.messageCount,
-            isProcessing: this.isProcessing
+            isProcessing: this.isProcessing,
+            // 🧵 CHECKPOINT 1.4: Incluir info de thread
+            threadId: this.currentThreadId,
+            conversationStarted: this.conversationStarted
         };
     }
 }

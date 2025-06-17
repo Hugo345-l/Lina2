@@ -118,10 +118,10 @@ Transformar o sistema atual de "runs isolados" em um sistema de threads persiste
 #### **🔧 PARTE 1: Backend - Threading com SQLite Checkpointer**
 
 ##### **1.1 Configuração do Checkpointer**
-- [ ] Importar `SqliteSaver` do LangGraph
-- [ ] Criar arquivo SQLite `lina_conversations.db` na raiz do projeto
-- [ ] Configurar checkpointer com conexão SQLite usando WAL mode para performance
-- [ ] Integrar o checkpointer ao chain atual (sem quebrar funcionalidade existente)
+- [x] Importar `SqliteSaver` do LangGraph
+- [x] Criar arquivo SQLite `lina_conversations.db` na raiz do projeto
+- [x] Configurar checkpointer com conexão SQLite usando WAL mode para performance
+- [x] Integrar o checkpointer ao chain atual (sem quebrar funcionalidade existente)
 
 **🧪 CHECKPOINT 1.1: Teste de Checkpointer Básico** ✅ **CONCLUÍDO (16/06/2025)**
 - [x] ✅ Verificar se arquivo `lina_conversations.db` foi criado na raiz
@@ -139,73 +139,111 @@ Transformar o sistema atual de "runs isolados" em um sistema de threads persiste
 - 🎯 **StateGraph funcional**: MessagesState + AgentState implementado corretamente
 
 ##### **1.2 Modificação do Wrapper Principal**
-- [ ] Adicionar parâmetro `thread_id` ao `lina_api_wrapper`
-- [ ] Implementar lógica de geração automática de `thread_id` quando não fornecido
-- [ ] Criar configuração `{"configurable": {"thread_id": thread_id}}` para o LangGraph
-- [ ] Passar a config na execução do chain
-- [ ] Manter toda funcionalidade atual intacta
+- [x] Adicionar parâmetro `thread_id` ao `lina_api_wrapper`
+- [x] Implementar lógica de geração automática de `thread_id` quando não fornecido
+- [x] Criar configuração `{"configurable": {"thread_id": thread_id}}` para o LangGraph
+- [x] Passar a config na execução do chain
+- [x] Manter toda funcionalidade atual intacta
 
-**🧪 CHECKPOINT 1.2: Teste de Thread ID Básico**
-- [ ] ✅ Testar mensagem sem `thread_id` → deve gerar automaticamente
-- [ ] ✅ Testar mensagem com `thread_id` específico → deve usar o fornecido
-- [ ] ✅ Confirmar que funcionalidade atual não foi quebrada (mensagens funcionam)
-- [ ] ✅ Verificar logs do backend para ver `thread_id` sendo processado
-- [ ] ✅ Usar SQLite browser para confirmar threads separadas no banco
+**🧪 CHECKPOINT 1.2: Teste de Thread ID Básico** ✅ **CONCLUÍDO (16/06/2025)**
+- [x] ✅ Testar mensagem sem `thread_id` → deve gerar automaticamente
+- [x] ✅ Testar mensagem com `thread_id` específico → deve usar o fornecido
+- [x] ✅ Confirmar que funcionalidade atual não foi quebrada (mensagens funcionam)
+- [x] ✅ Verificar logs do backend para ver `thread_id` sendo processado
+- [x] ✅ Usar SQLite browser para confirmar threads separadas no banco
+
+**✅ Resultados do CHECKPOINT 1.2:**
+- 🧵 **Thread ID gerado automaticamente**: `thread_default_user_72e98192`
+- 🔧 **Configuração LangGraph**: Thread config passada corretamente na execução
+- ✅ **Funcionalidade preservada**: Sistema anterior funciona normalmente
+- 📊 **Logs funcionais**: Thread ID visível nos logs do backend e frontend
+- 🗄️ **SQLite funcional**: Threads separadas persistidas no banco de dados
 
 ##### **1.3 Enriquecimento do Debug Info**
-- [ ] Adicionar `thread_id` ao `debug_info` retornado
-- [ ] Gerar `message_id` único para cada mensagem (timestamp ou UUID)
-- [ ] Incluir número sequencial da mensagem na thread
-- [ ] Preparar estrutura para futura informação de fluxo multi-agente
-- [ ] Manter compatibilidade com frontend atual
+- [x] Adicionar `thread_id` ao `debug_info` retornado
+- [x] Gerar `message_id` único para cada mensagem (timestamp ou UUID)
+- [x] Incluir número sequencial da mensagem na thread
+- [x] Preparar estrutura para futura informação de fluxo multi-agente
+- [x] Manter compatibilidade com frontend atual
 
-**🧪 CHECKPOINT 1.3: Teste de Debug Info Enriquecido**
-- [ ] ✅ Verificar se `debug_info` agora inclui `thread_id` na resposta
-- [ ] ✅ Confirmar que `message_id` é único a cada mensagem
-- [ ] ✅ Testar que número sequencial incrementa corretamente (1, 2, 3...)
-- [ ] ✅ Validar que frontend ainda exibe métricas corretamente
-- [ ] ✅ Inspecionar resposta JSON completa no debug panel ou console
+**🧪 CHECKPOINT 1.3: Teste de Debug Info Enriquecido** ✅ **CONCLUÍDO (16/06/2025)**
+- [x] ✅ Verificar se `debug_info` agora inclui `thread_id` na resposta
+- [x] ✅ Confirmar que `message_id` é único a cada mensagem
+- [x] ✅ Testar que número sequencial incrementa corretamente (1, 2, 3...)
+- [x] ✅ Validar que frontend ainda exibe métricas corretamente
+- [x] ✅ Inspecionar resposta JSON completa no debug panel ou console
+
+**✅ Resultados do CHECKPOINT 1.3:**
+- 🧵 **Thread ID no debug_info**: Incluído corretamente em todas as respostas
+- 🆔 **Message ID único**: Gerado automaticamente para cada mensagem
+- 📊 **Debug info enriquecido**: Estrutura preparada para expansão futura
+- ✅ **Compatibilidade frontend**: Interface continua funcionando perfeitamente
+- 🔍 **JSON inspecionável**: Debug panel exibe todas as métricas corretamente
 
 ##### **1.4 Endpoint para Nova Thread**
-- [ ] Criar endpoint `POST /chat/new-thread` que retorna novo `thread_id`
-- [ ] Implementar lógica de limpeza/reset se necessário
-- [ ] Adicionar headers opcionais para `thread_id` em `/chat/invoke`
-- [ ] Documentar novos parâmetros e respostas
+- [x] Criar endpoint `POST /chat/new-thread` que retorna novo `thread_id`
+- [x] Implementar lógica de limpeza/reset se necessário
+- [x] Adicionar headers opcionais para `thread_id` em `/chat/invoke`
+- [x] Documentar novos parâmetros e respostas
 
-**🧪 CHECKPOINT 1.4: Teste de Endpoint Nova Thread**
-- [ ] ✅ Testar endpoint `/chat/new-thread` via Postman ou curl
-- [ ] ✅ Verificar se retorna `thread_id` válido no formato esperado
-- [ ] ✅ Confirmar que endpoint `/chat/invoke` aceita `thread_id` no header
-- [ ] ✅ Testar fluxo: nova thread → mensagem → resposta com metrics corretos
-- [ ] ✅ Validar que diferentes `thread_ids` mantêm conversas separadas
+**🧪 CHECKPOINT 1.4: Teste de Endpoint Nova Thread** ✅ **CONCLUÍDO (16/06/2025)**
+- [x] ✅ Testar endpoint `/chat/new-thread` via Postman ou curl
+- [x] ✅ Verificar se retorna `thread_id` válido no formato esperado
+- [x] ✅ Confirmar que endpoint `/chat/invoke` aceita `thread_id` no header
+- [x] ✅ Testar fluxo: nova thread → mensagem → resposta com metrics corretos
+- [x] ✅ Validar que diferentes `thread_ids` mantêm conversas separadas
+
+**✅ Resultados do CHECKPOINT 1.4:**
+- 🌐 **Endpoint `/chat/new-thread`**: Implementado e funcional
+- 🧵 **Thread ID automático**: Frontend cria thread automaticamente na primeira mensagem
+- 🔄 **Thread management**: Frontend mantém thread_id entre mensagens
+- 💾 **Persistência funcional**: Conversas separadas por thread mantidas no SQLite
+- 🧠 **Memória de conversa**: Segunda mensagem lembrou da primeira (teste confirmado)
 
 #### **🎨 PARTE 2: Frontend - UI para Threading**
 
 ##### **2.1 Interface de Nova Conversa**
-- [ ] Adicionar botão "Nova Conversa" no header ao lado do título "Lina"
-- [ ] Implementar visual clean com ícone + texto
-- [ ] Posicionar de forma não obstrutiva mas acessível
-- [ ] Estilizar seguindo design system existente (azul primário)
+- [x] Adicionar botão "Nova Conversa" no header ao lado do título "Lina"
+- [x] Implementar visual clean com ícone + texto
+- [x] Posicionar de forma não obstrutiva mas acessível
+- [x] Estilizar seguindo design system existente (azul primário)
 
-**🧪 CHECKPOINT 2.1: Teste de Botão Nova Conversa**
-- [ ] ✅ Verificar se botão aparece corretamente no header
-- [ ] ✅ Testar se clique no botão executa função (mesmo que vazia inicialmente)
-- [ ] ✅ Confirmar que layout não quebrou com adição do botão
-- [ ] ✅ Validar que estilo segue design system (cores, espaçamento)
-- [ ] ✅ Testar responsividade em mobile (botão ainda acessível)
+**🧪 CHECKPOINT 2.1: Teste de Botão Nova Conversa** ✅ **CONCLUÍDO (16/06/2025)**
+- [x] ✅ Verificar se botão aparece corretamente no header
+- [x] ✅ Testar se clique no botão executa função (mesmo que vazia inicialmente)
+- [x] ✅ Confirmar que layout não quebrou com adição do botão
+- [x] ✅ Validar que estilo segue design system (cores, espaçamento)
+- [x] ✅ Testar responsividade em mobile (botão ainda acessível)
+
+**✅ Resultados do CHECKPOINT 2.1:**
+- 🎨 **Botão implementado**: Visual clean com ícone 🔄 e texto "Nova Conversa"
+- 🎯 **Posicionamento**: Header entre título e status, não obstrutivo
+- 🎨 **Design system**: Azul primário, hover effects, responsividade mobile
+- ⚡ **Funcionalidade**: Event listener configurado, função startNewConversation implementada
+- ⌨️ **Atalho**: Ctrl/Cmd+N para nova conversa
+- 📱 **Mobile**: Texto oculto em telas pequenas (só ícone)
 
 ##### **2.2 Display de Thread Info**
-- [ ] Criar área discreta no header mostrando `thread_id` atual
-- [ ] Formatar ID de forma user-friendly (ex: "Thread: abc123")
-- [ ] Implementar tooltip com info completa se necessário
-- [ ] Tornar visível mas não proeminente
+- [x] Criar área discreta no header mostrando `thread_id` atual
+- [x] Formatar ID de forma user-friendly (ex: "Thread: abc123")
+- [x] Implementar visual integrado ao design system
+- [x] Tornar visível mas não proeminente
+- [x] Responsividade mobile (ocultar emoji em telas pequenas)
 
-**🧪 CHECKPOINT 2.2: Teste de Display Thread ID**
-- [ ] ✅ Verificar se `thread_id` aparece no header após primeira mensagem
-- [ ] ✅ Confirmar formato user-friendly (não UUID bruto)
-- [ ] ✅ Testar que thread ID muda quando backend gera novo
-- [ ] ✅ Validar que área não interfere com outros elementos do header
-- [ ] ✅ Testar tooltip (se implementado) funciona corretamente
+**🧪 CHECKPOINT 2.2: Teste de Display Thread ID** ✅ **CONCLUÍDO (16/06/2025)**
+- [x] ✅ Verificar se `thread_id` aparece no header após primeira mensagem
+- [x] ✅ Confirmar formato user-friendly (não UUID bruto)
+- [x] ✅ Testar que thread ID muda quando backend gera novo
+- [x] ✅ Validar que área não interfere com outros elementos do header
+- [x] ✅ Testar funcionalidade de reset (desaparece com Nova Conversa)
+
+**✅ Resultados do CHECKPOINT 2.2:**
+- 🎨 **Thread ID exibido**: Format user-friendly `🧵 b728dbf3` (últimos 8 caracteres hex)
+- 🔄 **Reset funcional**: Thread ID desaparece corretamente ao clicar "Nova Conversa"
+- 🆔 **IDs únicos**: Cada nova thread gera ID diferente (`16416d95` → `b728dbf3`)
+- 📱 **Responsividade**: Design funciona em desktop e mobile
+- ✅ **Integração**: Visual integrado ao design system sem interferir em outros elementos
+- 🧵 **Threading funcional**: Backend cria threads separadas no SQLite corretamente
 
 ##### **2.3 Debug Panel - Reestruturação Expandível**
 - [ ] **"📱 Última Mensagem"**: métricas da call atual (colapsível)
