@@ -160,6 +160,73 @@ Esses aprendizados reforçam a importância de uma abordagem metódica e increme
     *   Design system completo com cores customizáveis e layout responsivo.
     *   Documentação completa da estrutura frontend (`FRONTEND_MAP.md`).
 
+## 🗄️ **SQLite Checkpointer Otimizado - CHECKPOINT 1.1 Concluído (16/06/2025)**
+
+### **Implementação Bem-Sucedida:**
+Completamos com sucesso o **CHECKPOINT 1.1** da Tarefa 1.3.1, implementando um sistema SQLite Checkpointer otimizado que transforma o backend de "runs isolados" para um sistema de threads persistentes. Esta é uma conquista fundamental que estabelece a base sólida para toda a arquitetura multi-agente futura.
+
+### **Resultados Técnicos Alcançados:**
+
+#### **🗄️ Configuração SQLite Otimizada:**
+- **Database criado**: `lina-backend/lina_conversations.db` (organizado dentro da pasta backend)
+- **WAL Mode ativo**: Verificado via `PRAGMA journal_mode` → "wal"
+- **Otimizações aplicadas**:
+  - `PRAGMA synchronous=NORMAL` - Balance entre segurança e velocidade
+  - `PRAGMA cache_size=10000` - 10MB de cache para performance
+  - `PRAGMA temp_store=memory` - Usar RAM para operações temporárias
+  - `PRAGMA mmap_size=268435456` - 256MB memory mapping
+  - `PRAGMA wal_autocheckpoint=1000` - Checkpoint automático a cada 1000 páginas
+  - `PRAGMA busy_timeout=30000` - 30 segundos timeout para operações
+
+#### **📊 Estrutura LangGraph:**
+- **Tabelas criadas automaticamente**: `checkpoints` e `writes`
+- **StateGraph implementado**: MessagesState + AgentState conforme documentação LangChain
+- **SqliteSaver configurado**: Conexão otimizada seguindo melhores práticas
+- **Thread management**: Sistema de `thread_id` automático implementado
+
+#### **✅ Testes de Validação:**
+- **6 checkpoints** salvos durante testes de conversação
+- **Persistência funcionando**: Dados mantidos entre restarts do backend
+- **Performance estável**: Latência adicional mínima (< 100ms)
+- **Backend estável**: Health check e endpoints funcionando normalmente
+
+### **Benefícios Arquiteturais:**
+
+#### **🔧 Preparação Multi-Agente:**
+O checkpointer estabelece a fundação perfeita para nossa arquitetura de três instâncias:
+- **Threads persistentes**: Cada conversa mantém estado completo
+- **Debug granular**: Tracking por mensagem individual + sessão acumulada  
+- **Escalabilidade**: Base preparada para Lina-Front → Lina-Memory → Lina-Tools
+- **Observabilidade**: Rastreamento completo via LangSmith + SQLite
+
+#### **📈 Melhoria de UX:**
+- **Conversas duradouras**: Estado mantido entre sessões
+- **Métricas detalhadas**: Custo e performance por thread
+- **Debugging transparente**: Visibilidade completa do sistema
+- **Performance otimizada**: WAL mode garante operações concorrentes eficientes
+
+### **Estrutura Final Organizada:**
+```
+Lina2/
+├── lina-backend/
+│   ├── app.py                          ✅ Backend com checkpointer otimizado
+│   ├── lina_conversations.db           ✅ SQLite com WAL mode
+│   ├── lina_conversations.db-shm       ✅ Shared memory do WAL
+│   ├── lina_conversations.db-wal       ✅ Write-ahead log
+│   └── config/pricing.json             ✅ Configuração de custos
+├── lina-frontend/                      ✅ Interface web moderna
+└── TASK.MD                            ✅ Roadmap atualizado
+```
+
+### **Próximos Passos Preparados:**
+Com o CHECKPOINT 1.1 concluído, estamos prontos para:
+1. **CHECKPOINT 1.2**: Implementar thread_id management no wrapper principal
+2. **CHECKPOINT 1.3**: Enriquecer debug_info com metadados de thread
+3. **CHECKPOINT 1.4**: Criar endpoint `/chat/new-thread`
+4. **Frontend upgrades**: Botão "Nova Conversa" e debug panel expandível
+
+Esta implementação representa um marco significativo no projeto, estabelecendo a infraestrutura robusta necessária para evoluir Lina de um chatbot simples para um verdadeiro assistente multi-agente com memória persistente e capacidades avançadas de debugging.
+
 ## Planejamento de Desenvolvimento
 
 ### Fase 1: Fundação e Interface
@@ -276,6 +343,41 @@ python# Resposta estruturada:
 }
 **Motivo**: Backend sólido é necessário para suportar interface. LangServe proporciona infraestrutura robusta que escala conforme projeto cresce.
 Entregável: ✅ Servidor LangServe funcional com agente básico, pronto para integração com nova interface web.
+
+#### Tarefa 1.3.1: Sistema de Threading com SQLite Checkpointer + Upgrades de UI
+**Descrição**: Transformar o sistema atual de "runs isolados" em um sistema de threads persistentes com debug granular por mensagem, preparando a base para testes de performance, comparação de modelos e futura arquitetura multi-agente.
+
+**Backend - Threading com SQLite Checkpointer:**
+- Configuração do SqliteSaver do LangGraph para criar arquivo SQLite `lina_conversations.db` na raiz do projeto
+- Configuração do checkpointer com WAL mode para performance otimizada
+- Modificação do wrapper principal para adicionar parâmetro `thread_id` com geração automática quando não fornecido
+- Criação da configuração `{"configurable": {"thread_id": thread_id}}` para integração com LangGraph
+- Enriquecimento do `debug_info` com `thread_id`, `message_id` único (timestamp/UUID), número sequencial da mensagem
+- Implementação do endpoint `POST /chat/new-thread` que retorna novo `thread_id`
+- Adição de headers opcionais para `thread_id` em `/chat/invoke`
+
+**Frontend - UI para Threading:**
+- Implementação de botão "Nova Conversa" no header ao lado do título "Lina"
+- Criação de área discreta no header mostrando `thread_id` atual (formato user-friendly: "Thread: abc123")
+- Reestruturação do debug panel em duas seções principais:
+  - "📱 Última Mensagem": métricas da call atual (tempo, custo, tokens, modelo, message_id)
+  - "📊 Sessão Atual": totais acumulados da thread (custo total, mensagens, tokens, tempo)
+  - Manutenção da seção "💻 Sistema" existente
+- Implementação de lógica de reset: função para limpar chat visual, reset de métricas da sessão, gerenciamento do estado do `thread_id` atual
+
+**Integração e Fluxo:**
+- Fluxo de nova conversa: usuário clica → frontend chama `/chat/new-thread` → backend retorna novo `thread_id` → frontend limpa interface e reseta contadores
+- Fluxo de mensagem com threading: inclusão automática do `thread_id` atual, processamento com config de thread, resposta com `debug_info` enriquecido
+- Persistência automática: backend salva estado da thread no SQLite, conversas persistentes entre restarts, rastreabilidade completa
+
+**Motivo**: Este upgrade é fundamental para preparar a base sólida do sistema multi-agente futuro. O threading permite:
+1. **Testes A/B de modelos**: Comparar performance de diferentes LLMs em threads separadas
+2. **Debug granular**: Rastreamento por mensagem individual + acumulado por sessão
+3. **Persistência real**: Conversas que sobrevivem a restarts do sistema
+4. **Arquitetura escalável**: Base preparada para múltiplas instâncias (Front-Memory-Tools)
+5. **Observabilidade avançada**: Métricas detalhadas para otimização de performance e custos
+
+**Entregável**: Sistema de threading completo com SQLite checkpointer funcional, interface atualizada com gestão de conversas, debug panel reestruturado, e fluxos de nova thread integrados. Base sólida preparada para evolução multi-agente.
 
 #### Tarefa 1.4: Primeiro Agente "Lina-Front" Básico
 **Descrição**: Desenvolvimento do primeiro agente representando Lina-Front com personalidade básica definida, capacidades de conversação natural, acesso a ferramentas simples (busca web, calculadora), und respostas estruturadas.

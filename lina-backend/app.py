@@ -10,12 +10,17 @@ import json
 from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from langserve import add_routes
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.messages import AIMessage
+from langchain_core.messages import AIMessage, HumanMessage
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.graph import StateGraph, END
+from typing_extensions import TypedDict
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
@@ -39,6 +44,55 @@ os.environ["LANGCHAIN_TRACING_V2"] = os.getenv("LANGSMITH_TRACING", "false")
 os.environ["LANGCHAIN_API_KEY"] = os.getenv("LANGSMITH_API_KEY", "")
 os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGSMITH_PROJECT", "lina-project-default")
 
+# 🗄️ CONFIGURAÇÃO OTIMIZADA DO SQLITE CHECKPOINTER (TAREFA 1.3.1)
+import sqlite3
+
+SQLITE_DB_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), 'lina_conversations.db'))
+print(f"🗄️ SQLite Database Path: {SQLITE_DB_PATH}")
+
+def setup_optimized_sqlite():
+    """Configuração otimizada do SQLite conforme documentação LangChain"""
+    try:
+        # Conexão direta com configurações específicas
+        conn = sqlite3.connect(
+            SQLITE_DB_PATH,
+            check_same_thread=False,
+            isolation_level=None  # WAL mode funciona melhor sem isolation
+        )
+        
+        # Habilitar WAL mode (Write-Ahead Logging)
+        conn.execute("PRAGMA journal_mode=WAL")
+        print("✅ WAL mode habilitado")
+        
+        # Otimizações de performance conforme documentação
+        conn.execute("PRAGMA synchronous=NORMAL")     # Balance entre segurança e velocidade
+        conn.execute("PRAGMA cache_size=10000")       # 10MB de cache
+        conn.execute("PRAGMA temp_store=memory")      # Usar RAM para temporários
+        conn.execute("PRAGMA mmap_size=268435456")    # 256MB memory mapping
+        
+        # Configurações específicas do WAL
+        conn.execute("PRAGMA wal_autocheckpoint=1000") # Checkpoint a cada 1000 páginas
+        conn.execute("PRAGMA busy_timeout=30000")      # 30 segundos timeout
+        
+        print("✅ Otimizações SQLite aplicadas")
+        
+        # Criar SqliteSaver com conexão otimizada
+        checkpointer = SqliteSaver(conn)
+        print("✅ SqliteSaver criado com conexão otimizada")
+        
+        return checkpointer
+        
+    except Exception as e:
+        print(f"⚠️ Erro ao configurar SQLite otimizado: {e}")
+        return None
+
+# Configurar checkpointer otimizado
+checkpointer = setup_optimized_sqlite()
+if checkpointer:
+    print(f"✅ Checkpointer otimizado configurado em: {SQLITE_DB_PATH}")
+else:
+    print("⚠️ Fallback: Checkpointer desabilitado")
+
 # Inicializa FastAPI
 app = FastAPI(
     title="Lina Backend API",
@@ -54,6 +108,42 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Configurar arquivos estáticos para servir o frontend
+FRONTEND_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "lina-frontend"))
+print(f"🔍 Caminho do frontend: {FRONTEND_PATH}")
+print(f"🔍 Frontend existe: {os.path.exists(FRONTEND_PATH)}")
+
+if os.path.exists(FRONTEND_PATH):
+    # Montar arquivos estáticos ANTES da rota específica
+    app.mount("/static-frontend", StaticFiles(directory=FRONTEND_PATH), name="frontend")
+    print(f"✅ Frontend servido em: {FRONTEND_PATH}")
+    print(f"✅ Arquivos estáticos disponíveis em: /static-frontend/")
+else:
+    print(f"⚠️  Frontend não encontrado em: {FRONTEND_PATH}")
+
+# Rota específica para servir index.html em /lina-frontend/
+@app.get("/lina-frontend/")
+async def serve_frontend():
+    frontend_index = os.path.join(FRONTEND_PATH, "index.html")
+    print(f"🔍 Tentando servir: {frontend_index}")
+    print(f"🔍 Arquivo existe: {os.path.exists(frontend_index)}")
+    
+    if os.path.exists(frontend_index):
+        return FileResponse(frontend_index)
+    else:
+        return {"error": "Frontend index.html não encontrado", "path_checked": frontend_index}
+
+# Rota alternativa para acessar arquivos estáticos diretamente
+@app.get("/lina-frontend/{file_path:path}")
+async def serve_frontend_files(file_path: str):
+    full_path = os.path.join(FRONTEND_PATH, file_path)
+    print(f"🔍 Servindo arquivo: {full_path}")
+    
+    if os.path.exists(full_path) and os.path.isfile(full_path):
+        return FileResponse(full_path)
+    else:
+        return {"error": "Arquivo não encontrado", "path_checked": full_path}
 
 # Health check
 @app.get("/health")
@@ -188,13 +278,108 @@ def format_response_with_debug_info(llm_output: AIMessage) -> dict:
     
     return result
 
-# Chain principal - USANDO StrOutputParser para garantir string limpa
+# 🗄️ LANGGRAPH STATE E GRAPH CORRIGIDO (TAREFA 1.3.1)
+from langchain_core.messages import BaseMessage
+from langgraph.graph import MessagesState
+
+class AgentState(MessagesState):
+    """Estado do agente conforme documentação LangChain"""
+    thread_id: Optional[str] = None
+    user_id: Optional[str] = None
+    current_step: str = "chat"
+    debug_info: dict = {}
+
+def chat_node(state: AgentState) -> dict:
+    """Nó principal do chat conforme padrão LangChain"""
+    
+    # Extrair mensagens do estado (MessagesState format)
+    messages = state.get("messages", [])
+    if not messages:
+        return {"messages": [AIMessage(content="Olá! Como posso ajudar?")]}
+    
+    # Pegar a última mensagem (deve ser HumanMessage)
+    last_message = messages[-1]
+    user_input = last_message.content if hasattr(last_message, 'content') else str(last_message)
+    
+    print(f"[DEBUG] Chat node processing: {user_input[:50]}...")
+    
+    # Executar chain com LLM
+    try:
+        llm = get_llm()
+        chain = LINA_PROMPT | llm
+        
+        # Invocar com input estruturado
+        ai_message = chain.invoke({"input": user_input})
+        
+        # Extrair metadados para debug
+        metadata = getattr(ai_message, 'response_metadata', {})
+        token_usage = metadata.get('token_usage', {})
+        
+        debug_info = {
+            "tokens_used": token_usage.get('total_tokens', 0),
+            "prompt_tokens": token_usage.get('prompt_tokens', 0),
+            "completion_tokens": token_usage.get('completion_tokens', 0),
+            "model_name": metadata.get('model_name', 'unknown'),
+            "cost": calculate_cost(
+                metadata.get('model_name', ''), 
+                token_usage.get('prompt_tokens', 0),
+                token_usage.get('completion_tokens', 0), 
+                PRICING_CONFIG
+            )
+        }
+        
+        print(f"[DEBUG] Chat node completed - tokens: {debug_info['tokens_used']}")
+        
+        # Retornar state update conforme padrão
+        return {
+            "messages": [ai_message],
+            "debug_info": debug_info
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Chat node error: {e}")
+        error_message = AIMessage(content=f"Erro: {str(e)}")
+        return {
+            "messages": [error_message],
+            "debug_info": {"error": str(e)}
+        }
+
+def create_conversation_graph():
+    """Cria grafo de conversação otimizado conforme documentação"""
+    
+    print("🔧 Criando StateGraph com checkpointing...")
+    
+    # Criar graph com AgentState
+    workflow = StateGraph(AgentState)
+    
+    # Adicionar nó principal
+    workflow.add_node("chat", chat_node)
+    
+    # Definir entry point e edges
+    workflow.set_entry_point("chat")
+    workflow.add_edge("chat", END)
+    
+    # Compilar com checkpointer otimizado
+    if checkpointer:
+        compiled_graph = workflow.compile(checkpointer=checkpointer)
+        print("✅ StateGraph compilado com checkpointer")
+        return compiled_graph
+    else:
+        compiled_graph = workflow.compile()
+        print("⚠️ StateGraph compilado SEM checkpointer")
+        return compiled_graph
+
+# Criar instância do grafo otimizado
+conversation_graph = create_conversation_graph()
+print(f"🗄️ Conversation graph criado: {conversation_graph is not None}")
+
+# Chain principal - mantendo compatibilidade
 basic_chain = LINA_PROMPT | get_llm()
 langserve_chain_core = basic_chain | RunnableLambda(format_response_with_debug_info)
 
-# WRAPPER CORRIGIDO: Construção final garantindo separação
+# WRAPPER LANGSERVE COMPATÍVEL (TAREFA 1.3.1 - ETAPA 3)
 def lina_api_wrapper(input_data: dict) -> dict:
-    """Wrapper CORRIGIDO que garante resposta estruturada"""
+    """Wrapper LangServe compatível que usa StateGraph com checkpointing otimizado"""
     start_time = time.time()
 
     # Extrair mensagem do usuário
@@ -212,39 +397,113 @@ def lina_api_wrapper(input_data: dict) -> dict:
     else:
         user_message = str(input_data)
 
-    print(f"[DEBUG] Processing user message: {user_message}")
+    print(f"[DEBUG] Wrapper processing: {user_message[:50]}...")
 
-    # Executar chain
-    result_from_chain = langserve_chain_core.invoke({"input": user_message})
+    # 🗄️ USAR LANGGRAPH COM CHECKPOINTER OTIMIZADO
+    try:
+        # Configuração completa do thread conforme documentação
+        thread_id = f"thread_{int(time.time())}"
+        config = {
+            "configurable": {
+                "thread_id": thread_id,
+                "checkpoint_ns": "",
+                "checkpoint_id": None
+            }
+        }
+        
+        # Estado inicial com HumanMessage (MessagesState format)
+        initial_state = {
+            "messages": [HumanMessage(content=user_message)],
+            "thread_id": thread_id,
+            "current_step": "chat"
+        }
+        
+        print(f"[DEBUG] Invoking StateGraph with thread_id: {thread_id}")
+        
+        # Executar grafo com checkpointing
+        result = conversation_graph.invoke(initial_state, config=config)
+        
+        print(f"[DEBUG] StateGraph execution successful")
+        
+        # Extrair resposta do estado final (MessagesState format)
+        final_messages = result.get("messages", [])
+        if final_messages and len(final_messages) > 0:
+            # Pegar a última mensagem AI
+            last_ai_message = final_messages[-1]
+            if hasattr(last_ai_message, 'content'):
+                output = last_ai_message.content
+            else:
+                output = str(last_ai_message)
+        else:
+            output = "Erro: Nenhuma resposta gerada"
+        
+        # Extrair debug info do estado
+        debug_info_partial = result.get("debug_info", {})
+        
+        print(f"[DEBUG] Extracted output length: {len(output) if output else 0}")
+        print(f"[DEBUG] Debug info keys: {list(debug_info_partial.keys()) if debug_info_partial else []}")
+        
+    except Exception as e:
+        print(f"[ERROR] StateGraph error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        print(f"[ERROR] Falling back to basic chain")
+        # Fallback para chain básico se StateGraph falhar
+        try:
+            result_from_chain = langserve_chain_core.invoke({"input": user_message})
+            output = result_from_chain["output"]
+            debug_info_partial = result_from_chain["debug_info_partial"]
+            print(f"[DEBUG] Fallback successful")
+        except Exception as fallback_error:
+            print(f"[ERROR] Fallback also failed: {fallback_error}")
+            output = f"Erro: {str(e)}"
+            debug_info_partial = {
+                "cost": 0.0,
+                "tokens_used": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "model_name": "error"
+            }
     
     duration_seconds = time.time() - start_time
 
-    # CORREÇÃO FINAL: Construir resposta garantindo separação total
+    # Garantir estrutura de debug_info completa
+    if not debug_info_partial:
+        debug_info_partial = {
+            "cost": 0.0,
+            "tokens_used": 0,
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "model_name": "unknown"
+        }
+
+    # Construir resposta final
     final_debug_info = DebugInfo(
-        **result_from_chain["debug_info_partial"], 
+        cost=debug_info_partial.get("cost", 0.0),
+        tokens_used=debug_info_partial.get("tokens_used", 0),
+        prompt_tokens=debug_info_partial.get("prompt_tokens", 0),
+        completion_tokens=debug_info_partial.get("completion_tokens", 0),
+        model_name=debug_info_partial.get("model_name", "unknown"),
         duration=round(duration_seconds, 3)
     )
 
-    # Garantir que output é apenas string limpa
-    clean_output = result_from_chain["output"]
-    if not isinstance(clean_output, str):
-        clean_output = str(clean_output)
+    # Garantir que output é string limpa
+    if not isinstance(output, str):
+        output = str(output)
 
-    # Criar objeto resposta
+    # Criar resposta estruturada
     chat_response_obj = ChatResponse(
-        output=clean_output,
+        output=output,
         debug_info=final_debug_info
     )
     
-    # Converter para dict
     response_dict = chat_response_obj.model_dump()
     
-    # DEBUGGING FINAL: Verificar estrutura antes de retornar
-    print(f"[DEBUG] Final response keys: {list(response_dict.keys())}")
-    print(f"[DEBUG] Output type: {type(response_dict['output'])}")
-    print(f"[DEBUG] Output content: {response_dict['output'][:100]}...")
-    print(f"[DEBUG] Debug info type: {type(response_dict['debug_info'])}")
-    print(f"[DEBUG] Debug info keys: {list(response_dict['debug_info'].keys())}")
+    # DEBUGGING FINAL
+    print(f"[DEBUG] Response created - output length: {len(response_dict['output'])}")
+    print(f"[DEBUG] Duration: {duration_seconds:.3f}s")
+    print(f"[DEBUG] Tokens: {final_debug_info.tokens_used}")
     
     return response_dict
 
