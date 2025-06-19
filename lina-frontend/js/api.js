@@ -231,6 +231,197 @@ class LinaAPI {
     }
 
     /**
+     * 📝 THREADS SIDEBAR: Lista threads do usuário
+     * @param {string} userId - ID do usuário
+     * @param {number} limit - Limite de threads a buscar
+     * @returns {Promise<{success: boolean, threads: Array, groups: object}>}
+     */
+    async getUserThreads(userId = null, limit = 50) {
+        try {
+            const searchParams = new URLSearchParams({
+                user_id: userId || this.userId,
+                limit: limit.toString()
+            });
+
+            console.log('[API] 📝 Buscando threads do usuário:', { userId: userId || this.userId, limit });
+
+            const response = await fetch(`${this.baseURL}/chat/threads?${searchParams}`, {
+                method: 'GET',
+                headers: this.headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('[API] 📝 Threads recebidas:', data);
+
+            return data;
+
+        } catch (error) {
+            console.error('[API] 📝 Erro ao buscar threads:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 📝 THREADS SIDEBAR: Obtém detalhes de uma thread específica
+     * @param {string} threadId - ID da thread
+     * @returns {Promise<object>}
+     */
+    async getThreadDetails(threadId) {
+        try {
+            console.log('[API] 📝 Buscando detalhes da thread:', threadId);
+
+            const response = await fetch(`${this.baseURL}/chat/threads/${threadId}`, {
+                method: 'GET',
+                headers: this.headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('[API] 📝 Detalhes da thread:', data);
+
+            return data;
+
+        } catch (error) {
+            console.error('[API] 📝 Erro ao buscar detalhes da thread:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 📝 THREADS SIDEBAR: Atualiza título de uma thread
+     * @param {string} threadId - ID da thread
+     * @param {string} newTitle - Novo título
+     * @returns {Promise<{success: boolean}>}
+     */
+    async updateThreadTitle(threadId, newTitle) {
+        try {
+            const payload = { title: newTitle };
+
+            console.log('[API] 📝 Atualizando título da thread:', { threadId, newTitle });
+
+            const response = await fetch(`${this.baseURL}/chat/threads/${threadId}/title`, {
+                method: 'PUT',
+                headers: this.headers,
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('[API] 📝 Título atualizado:', data);
+
+            return data;
+
+        } catch (error) {
+            console.error('[API] 📝 Erro ao atualizar título:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 📝 THREADS SIDEBAR: Exclui uma thread
+     * @param {string} threadId - ID da thread
+     * @returns {Promise<{success: boolean}>}
+     */
+    async deleteThread(threadId) {
+        try {
+            console.log('[API] 📝 Excluindo thread:', threadId);
+
+            const response = await fetch(`${this.baseURL}/chat/threads/${threadId}`, {
+                method: 'DELETE',
+                headers: this.headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('[API] 📝 Thread excluída:', data);
+
+            return data;
+
+        } catch (error) {
+            console.error('[API] 📝 Erro ao excluir thread:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 📝 NOVO: Busca histórico de mensagens de uma thread específica
+     * @param {string} threadId - ID da thread
+     * @param {number} limit - Limite de mensagens (padrão: 50)
+     * @returns {Promise<{success: boolean, messages: Array, total_messages: number}>}
+     */
+    async getThreadMessages(threadId, limit = 50) {
+        try {
+            console.log('[API] 📝 Buscando mensagens da thread:', threadId);
+
+            const response = await fetch(`${this.baseURL}/chat/threads/${threadId}/messages?limit=${limit}`, {
+                method: 'GET',
+                headers: this.headers
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('[API] 📝 Mensagens da thread recebidas:', data);
+
+            return data;
+
+        } catch (error) {
+            console.error('[API] 📝 Erro ao buscar mensagens da thread:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 📝 THREADS SIDEBAR: Carrega thread completa com histórico de mensagens
+     * @param {string} threadId - ID da thread
+     * @returns {Promise<object>}
+     */
+    async loadThread(threadId) {
+        try {
+            console.log('[API] 📝 Carregando thread completa:', threadId);
+
+            // Definir thread atual
+            this.currentThreadId = threadId;
+
+            // Buscar histórico de mensagens da thread
+            const messagesResult = await this.getThreadMessages(threadId);
+
+            if (messagesResult.success) {
+                console.log('[API] 📝 Thread carregada com', messagesResult.total_messages, 'mensagens');
+                
+                return {
+                    success: true,
+                    thread_id: threadId,
+                    messages: messagesResult.messages,
+                    total_messages: messagesResult.total_messages,
+                    message: 'Thread carregada com sucesso'
+                };
+            } else {
+                throw new Error(messagesResult.error || 'Erro ao carregar mensagens da thread');
+            }
+
+        } catch (error) {
+            console.error('[API] 📝 Erro ao carregar thread:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Obtém informações do sistema
      * @returns {Promise<object>}
      */

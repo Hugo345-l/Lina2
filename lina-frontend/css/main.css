@@ -60,13 +60,22 @@ body {
 /* === Layout Principal === */
 .app-container {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr auto; /* threads-sidebar | chat-container | debug-panel */
     height: 100vh;
     transition: grid-template-columns var(--transition-normal);
 }
 
+/* Estados de collapse */
 .app-container.debug-collapsed {
-    grid-template-columns: 1fr 48px;
+    grid-template-columns: auto 1fr 48px;
+}
+
+.app-container.threads-collapsed {
+    grid-template-columns: 0 1fr auto;
+}
+
+.app-container.debug-collapsed.threads-collapsed {
+    grid-template-columns: 0 1fr 48px;
 }
 
 /* === Loading Overlay === */

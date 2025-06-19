@@ -7,12 +7,127 @@
     <link rel="stylesheet" href="css/main.css">
     <link rel="stylesheet" href="css/chat.css">
     <link rel="stylesheet" href="css/debug-panel.css">
+    <link rel="stylesheet" href="css/threads-sidebar.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-container">
+        <!-- Threads Sidebar -->
+        <aside class="threads-sidebar" id="threadsSidebar">
+            <div class="threads-resize-handle" id="threadsResizeHandle"></div>
+            <header class="threads-header">
+                <div class="threads-title">
+                    <span class="sidebar-icon">📝</span>
+                    <span class="sidebar-text">Conversas</span>
+                </div>
+                <div class="threads-actions">
+                    <button id="newThreadBtn" class="icon-btn" title="Nova Conversa">
+                        <span>➕</span>
+                    </button>
+                    <button id="threadsSearchBtn" class="icon-btn" title="Buscar">
+                        <span>🔍</span>
+                    </button>
+                    <button id="threadsCollapseBtn" class="icon-btn" title="Recolher Sidebar">
+                        <span>◀</span>
+                    </button>
+                </div>
+            </header>
+            
+            <div class="threads-search" id="threadsSearch" style="display: none;">
+                <input type="search" placeholder="Buscar conversas..." id="threadsSearchInput" />
+                <button class="search-clear" id="searchClear">✕</button>
+            </div>
+            
+            <div class="threads-content" id="threadsContent">
+                <div class="threads-group" data-group="today">
+                    <header class="group-header" data-toggle="today">
+                        <span class="group-icon">📁</span>
+                        <span class="group-label">Hoje</span>
+                        <span class="group-count" id="countToday">(0)</span>
+                        <span class="group-toggle">▼</span>
+                    </header>
+                    <div class="group-threads" id="threadsToday">
+                        <!-- Threads de hoje serão carregadas aqui -->
+                    </div>
+                </div>
+                
+                <div class="threads-group" data-group="yesterday">
+                    <header class="group-header" data-toggle="yesterday">
+                        <span class="group-icon">📁</span>
+                        <span class="group-label">Ontem</span>
+                        <span class="group-count" id="countYesterday">(0)</span>
+                        <span class="group-toggle">▼</span>
+                    </header>
+                    <div class="group-threads" id="threadsYesterday">
+                        <!-- Threads de ontem serão carregadas aqui -->
+                    </div>
+                </div>
+                
+                <div class="threads-group" data-group="thisWeek">
+                    <header class="group-header" data-toggle="thisWeek">
+                        <span class="group-icon">📁</span>
+                        <span class="group-label">Esta Semana</span>
+                        <span class="group-count" id="countThisWeek">(0)</span>
+                        <span class="group-toggle">▼</span>
+                    </header>
+                    <div class="group-threads" id="threadsThisWeek">
+                        <!-- Threads desta semana serão carregadas aqui -->
+                    </div>
+                </div>
+                
+                <div class="threads-group" data-group="thisMonth">
+                    <header class="group-header" data-toggle="thisMonth">
+                        <span class="group-icon">📁</span>
+                        <span class="group-label">Este Mês</span>
+                        <span class="group-count" id="countThisMonth">(0)</span>
+                        <span class="group-toggle">▼</span>
+                    </header>
+                    <div class="group-threads" id="threadsThisMonth">
+                        <!-- Threads deste mês serão carregadas aqui -->
+                    </div>
+                </div>
+                
+                <div class="threads-group" data-group="older">
+                    <header class="group-header" data-toggle="older">
+                        <span class="group-icon">📁</span>
+                        <span class="group-label">Mais Antigo</span>
+                        <span class="group-count" id="countOlder">(0)</span>
+                        <span class="group-toggle">▼</span>
+                    </header>
+                    <div class="group-threads" id="threadsOlder">
+                        <!-- Threads mais antigas serão carregadas aqui -->
+                    </div>
+                </div>
+                
+                <!-- Estado vazio -->
+                <div class="threads-empty" id="threadsEmpty" style="display: none;">
+                    <div class="empty-state">
+                        <span class="empty-icon">💬</span>
+                        <h3>Nenhuma conversa ainda</h3>
+                        <p>Suas conversas aparecerão aqui</p>
+                        <button class="btn-primary" onclick="window.threadSidebar?.createNewThread()">
+                            Iniciar Primeira Conversa
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading state -->
+                <div class="threads-loading" id="threadsLoading" style="display: none;">
+                    <div class="loading-state">
+                        <div class="loading-spinner-small"></div>
+                        <p>Carregando conversas...</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Botão de Expansão da Sidebar (aparece quando colapsada) -->
+        <button class="threads-expand-btn" id="threadsExpandBtn" style="display: none;" title="Expandir Sidebar">
+            <span>▶</span>
+        </button>
+
         <!-- Chat Principal -->
         <main class="chat-container">
             <header class="chat-header">
@@ -197,6 +312,7 @@
     <script src="js/api.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/debug-panel.js"></script>
+    <script src="js/threads-sidebar.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

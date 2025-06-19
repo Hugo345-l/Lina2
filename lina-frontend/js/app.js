@@ -7,6 +7,7 @@ class LinaApp {
     constructor() {
         this.chatManager = null;
         this.debugPanel = null;
+        this.threadSidebar = null; // 📝 THREADS SIDEBAR
         this.isInitialized = false;
         
         this.init();
@@ -53,11 +54,24 @@ class LinaApp {
             this.chatManager = new ChatManager();
             window.chatManager = this.chatManager;
             
+            // 📝 THREADS SIDEBAR: Inicializar se elemento existir
+            if (document.getElementById('threadsSidebar')) {
+                this.threadSidebar = window.threadSidebar || null; // Pode ser inicializada por threads-sidebar.js
+                if (this.threadSidebar) {
+                    console.log('[App] 📝 ThreadSidebar detectada e integrada');
+                } else {
+                    console.log('[App] 📝 ThreadSidebar não foi inicializada ainda - aguardando...');
+                }
+            }
+            
             // Verificar conectividade
             await this.checkConnectivity();
             
             // Configurar event listeners globais
             this.setupGlobalListeners();
+            
+            // 📝 THREADS SIDEBAR: Configurar integração
+            this.setupThreadsIntegration();
             
             // Marcar como inicializado
             this.isInitialized = true;
@@ -182,6 +196,62 @@ class LinaApp {
         window.addEventListener('unhandledrejection', (e) => {
             console.error('[App] Promise rejeitada:', e.reason);
         });
+    }
+
+    /**
+     * 📝 THREADS SIDEBAR: Configura integração entre componentes
+     */
+    setupThreadsIntegration() {
+        // Event listener para mudança de thread
+        window.addEventListener('threadSwitch', (e) => {
+            const { threadId } = e.detail;
+            console.log('[App] 📝 Evento threadSwitch recebido:', threadId);
+            
+            if (this.chatManager && typeof this.chatManager.loadThread === 'function') {
+                this.chatManager.loadThread(threadId);
+            }
+        });
+
+        // Event listener para criação de nova thread
+        window.addEventListener('newThread', () => {
+            console.log('[App] 📝 Evento newThread recebido');
+            this.startNewConversation();
+        });
+
+        // Sincronizar thread sidebar quando thread muda no chat
+        if (this.chatManager) {
+            // Hook para quando nova thread é criada
+            const originalSendMessage = this.chatManager.sendMessage;
+            if (originalSendMessage) {
+                this.chatManager.sendMessage = async function(...args) {
+                    const result = await originalSendMessage.apply(this, args);
+                    
+                    // Atualizar sidebar após nova mensagem
+                    if (window.threadSidebar && typeof window.threadSidebar.refresh === 'function') {
+                        setTimeout(() => {
+                            window.threadSidebar.refresh();
+                        }, 1000);
+                    }
+                    
+                    return result;
+                };
+            }
+        }
+
+        console.log('[App] 📝 Integração com ThreadSidebar configurada');
+    }
+
+    /**
+     * 📝 THREADS SIDEBAR: Integrar sidebar quando ela for carregada
+     */
+    integrateThreadSidebar() {
+        if (window.threadSidebar && !this.threadSidebar) {
+            this.threadSidebar = window.threadSidebar;
+            console.log('[App] 📝 ThreadSidebar integrada posteriormente');
+            
+            // Configurar integração se ainda não foi feita
+            this.setupThreadsIntegration();
+        }
     }
 
     /**

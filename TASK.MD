@@ -110,7 +110,21 @@ Interface web moderna desenvolvida com HTML, CSS e JavaScript puro, inspirada no
 
 ### **Tarefa 1.3.1: Sistema de Threading com SQLite Checkpointer + Upgrades de UI**
 
-**Status (16/06/2025): 🟡 CHECKPOINT 1.1 CONCLUÍDO** - SQLite Checkpointer otimizado implementado com sucesso.
+**Status (17/06/2025): 🚨 CRÍTICOS PROBLEMAS IDENTIFICADOS** - Sistema tem falhas graves de persistência.
+
+#### **🚨 PROBLEMAS CRÍTICOS DESCOBERTOS**
+- ❌ **Pickle Errors**: `unpickling stack underflow` em todas as threads
+- ❌ **Mensagens não recuperadas**: `⚠️ Nenhuma mensagem encontrada` para todas threads
+- ❌ **Histórico threads inoperante**: Clicar numa thread antiga não carrega o histórico
+- ❌ **Sidebar sem dados reais**: Threads listadas mas sem conteúdo/contexto
+- ❌ **Datas/horários não funcionam**: Timestamps não são exibidos corretamente
+- ❌ **Persistência quebrada**: Reiniciar servidor perde contexto das conversas
+
+#### **🔧 ROOT CAUSE ANÁLISE NECESSÁRIA**
+1. **SQLite Checkpointer**: Problema na serialização/deserialização
+2. **LangGraph State**: Possível incompatibilidade com o StateGraph atual
+3. **Message Storage**: Sistema de armazenamento pode estar corrompido
+4. **Thread Recovery**: Lógica de recuperação de threads falha
 
 #### **📋 Objetivo**
 Transformar o sistema atual de "runs isolados" em um sistema de threads persistentes com debug granular por mensagem, preparando a base para testes de performance, comparação de modelos e futura arquitetura multi-agente.
@@ -575,6 +589,69 @@ O debug panel expandido pode evoluir para mostrar fluxo entre instâncias:
   │ └─ Tools: $0.000125 (169t)             │
   └─────────────────────────────────────────┘
 ```
+
+---
+
+### **Tarefa 1.3.2: Correção e Implementação da Sidebar de Threads**
+
+**Status (17/06/2025): � PARCIALMENTE FUNCIONANDO** - Colapso/expansão funcional, carregamento de threads pendente
+
+#### **📋 Situação Atual**
+A implementação da sidebar de threads foi tentada mas **NÃO ESTÁ FUNCIONANDO**. Após teste pelo usuário, foram identificados problemas críticos que impedem o funcionamento.
+
+#### **🚨 Problemas Identificados**
+- ❌ **Sidebar não aparece**: Interface não carrega corretamente
+- ❌ **Botão de expansão ausente/não funciona**: Quando sidebar está colapsada, não há como expandi-la
+- ❌ **JavaScript com erros**: Implementação da classe ThreadSidebar tem falhas
+- ❌ **CSS não integrado**: Estilos não aplicados ou conflitando
+- ❌ **Falta integração**: Sidebar não conecta com o sistema existente
+
+#### **📁 Arquivos Implementados (Com Problemas)**
+- ❌ `lina-frontend/css/threads-sidebar.css` - CSS implementado mas não funcional
+- ❌ `lina-frontend/js/threads-sidebar.js` - JavaScript implementado mas com erros
+- ❌ `lina-frontend/index.html` - HTML adicionado mas integração falha
+
+#### **🎯 O Que Precisa Ser Feito (Nova Implementação)**
+
+##### **ETAPA 1: Diagnóstico e Correção**
+- [ ] **Debug completo**: Identificar todos os erros no console
+- [ ] **Verificar carregamento**: Confirmar se CSS/JS estão sendo carregados
+- [ ] **Testar integração**: Verificar se HTML está correto no index.html
+- [ ] **Corrigir referencias**: IDs, classes e seletores
+
+##### **ETAPA 2: Implementação Funcional Básica**
+- [ ] **Sidebar simples funcionando**: Apenas aparecer e colapsar/expandir
+- [ ] **Botão de expansão**: Implementar corretamente quando sidebar colapsada
+- [ ] **CSS integrado**: Garantir que estilos funcionam com design existente
+- [ ] **JavaScript básico**: Apenas funcionalidades de UI (sem backend ainda)
+
+##### **ETAPA 3: Integração com Backend**
+- [ ] **Conectar com endpoints**: Usar APIs `/chat/threads` implementadas
+- [ ] **Carregamento de threads**: Buscar e exibir threads reais
+- [ ] **Navegação funcional**: Click em thread carrega conversa
+- [ ] **Sincronização**: Sidebar reflete thread atual do chat
+
+##### **ETAPA 4: Funcionalidades Avançadas**
+- [ ] **Agrupamento temporal**: Organizar por "Hoje", "Ontem", etc.
+- [ ] **Busca de threads**: Campo de busca funcional
+- [ ] **Estados persistentes**: localStorage para preferências
+- [ ] **Responsividade**: Funcionar em mobile
+
+#### **🔧 Estratégia de Correção**
+1. **Começar do zero**: Reimplementar passo a passo, testando cada etapa
+2. **Teste incremental**: Validar cada funcionalidade antes de seguir para próxima
+3. **Integração gradual**: Primeiro UI, depois backend, depois recursos avançados
+4. **Documentação honesta**: Reportar problemas encontrados sem mascarar
+
+#### **🎯 Critério de Sucesso Mínimo**
+- ✅ Sidebar aparece visualmente
+- ✅ Botão de colapso/expansão funciona
+- ✅ Quando colapsada, botão de expansão aparece e funciona
+- ✅ CSS integrado sem quebrar layout existente
+- ✅ JavaScript sem erros no console
+
+#### **📝 Lição Aprendida**
+Implementar funcionalidades complexas de uma vez pode levar a falhas. É melhor implementar incrementalmente, testando cada parte antes de prosseguir.
 
 ---
 

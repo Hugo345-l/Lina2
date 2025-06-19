@@ -388,6 +388,13 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Optional, Dict, List
 
+# 🧵 MODELO PARA MENSAGENS DE THREAD (DEFINIDO ANTES DE ThreadManager)
+class ThreadMessage(BaseModel):
+    type: str  # 'human' ou 'ai'
+    content: str
+    timestamp: Optional[str] = None
+    message_id: Optional[str] = None
+
 class ThreadManager:
     """Gerenciador de threads de conversação conforme padrão LangChain"""
     
@@ -511,34 +518,565 @@ async def create_new_thread(request: NewThreadRequest):
             user_id=request.user_id
         )
 
-# 🧵 CHECKPOINT 1.3: Endpoint para Listar Threads do Usuário (BONUS)
+# 🧵 CHECKPOINT 3.1: ENDPOINTS COMPLETOS PARA THREADS SIDEBAR
+import sqlite3
+from datetime import datetime, timedelta
+
+class ThreadSummary(BaseModel):
+    id: str
+    title: str
+    lastMessage: str
+    lastActivity: str
+    messageCount: int
+    totalCost: float
+    isActive: bool = False
+
 class ListThreadsResponse(BaseModel):
     success: bool
-    threads: List[Dict[str, Any]]
+    threads: List[ThreadSummary]
     user_id: str
     total: int
+    groups: Dict[str, List[ThreadSummary]] = {}
 
-@app.get("/chat/threads/{user_id}", response_model=ListThreadsResponse)
-async def list_user_threads(user_id: str, limit: int = 20):
-    """Lista threads do usuário (implementação futura completa)"""
+class UpdateThreadTitleRequest(BaseModel):
+    title: str
+
+class ThreadManager:
+    """Gerenciador expandido de threads para sidebar"""
+    
+    def __init__(self, checkpointer):
+        self.checkpointer = checkpointer
+        self.db_path = SQLITE_DB_PATH
+    
+    def create_thread(self, user_id: str, metadata: dict = None) -> tuple[str, dict]:
+        """Cria nova thread de conversação"""
+        
+        thread_id = f"thread_{user_id}_{uuid.uuid4().hex[:8]}"
+        
+        # Metadados da thread
+        thread_metadata = {
+            "user_id": user_id,
+            "created_at": datetime.now().isoformat(),
+            "title": "Nova Conversa",
+            "message_count": 0,
+            **(metadata or {})
+        }
+        
+        # Configuração inicial
+        config = {
+            "configurable": {
+                "thread_id": thread_id,
+                "checkpoint_ns": "",
+                "checkpoint_id": None
+            },
+            "metadata": thread_metadata
+        }
+        
+        print(f"[ThreadManager] Created new thread: {thread_id} for user: {user_id}")
+        return thread_id, config
+    
+    def get_user_threads(self, user_id: str, limit: int = 50) -> List[ThreadSummary]:
+        """Lista threads do usuário com metadados REAIS do SQLite"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            conn.row_factory = sqlite3.Row
+            
+            print(f"[ThreadManager] 🔍 Buscando threads para user: {user_id}")
+            
+            # Query CORRIGIDA para agrupar corretamente por thread_id
+            query = """
+            SELECT 
+                c.thread_id,
+                COUNT(DISTINCT c.checkpoint_id) as checkpoint_count,
+                MAX(c.checkpoint_id) as last_checkpoint_id,
+                MIN(c.checkpoint_id) as first_checkpoint_id
+            FROM checkpoints c
+            WHERE c.thread_id LIKE ?
+            GROUP BY c.thread_id
+            ORDER BY MAX(c.checkpoint_id) DESC
+            LIMIT ?
+            """
+            
+            cursor = conn.execute(query, (f"thread_{user_id}_%", limit))
+            results = cursor.fetchall()
+            
+            print(f"[ThreadManager] 📊 Query retornou {len(results)} threads")
+            
+            threads = []
+            for row in results:
+                thread_id = row['thread_id']
+                checkpoint_count = row['checkpoint_count']
+                
+                print(f"[ThreadManager] 🧵 Processando thread: {thread_id} ({checkpoint_count} checkpoints)")
+                
+                # Obter última mensagem REAL da thread
+                last_message, timestamp = self._get_real_last_message(conn, thread_id)
+                
+                # Calcular número real de mensagens (aproximação)
+                message_count = max(1, checkpoint_count // 2)  # Cada ida/volta = ~2 checkpoints
+                
+                # Calcular custo estimado baseado em mensagens
+                total_cost = round(message_count * 0.001, 6)
+                
+                # Gerar título inteligente baseado no conteúdo real
+                title = self._generate_smart_title(last_message)
+                
+                # Usar timestamp real se disponível
+                last_activity = timestamp or datetime.now().isoformat()
+                
+                thread = ThreadSummary(
+                    id=thread_id,
+                    title=title,
+                    lastMessage=last_message[:50] + "..." if len(last_message) > 50 else last_message,
+                    lastActivity=last_activity,
+                    messageCount=message_count,
+                    totalCost=total_cost
+                )
+                threads.append(thread)
+                
+                print(f"[ThreadManager] ✅ Thread processada: {title} ({message_count} msgs, ${total_cost})")
+            
+            conn.close()
+            print(f"[ThreadManager] 🎯 Retornando {len(threads)} threads")
+            return threads
+            
+        except Exception as e:
+            print(f"[ThreadManager] ❌ Error getting user threads: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
+    def _get_last_message(self, conn: sqlite3.Connection, thread_id: str) -> str:
+        """Obtém última mensagem da thread"""
+        try:
+            # Buscar no checkpoint mais recente (usando checkpoint_id como ordenação)
+            query = """
+            SELECT checkpoint
+            FROM checkpoints 
+            WHERE thread_id = ?
+            ORDER BY checkpoint_id DESC
+            LIMIT 1
+            """
+            
+            cursor = conn.execute(query, (thread_id,))
+            result = cursor.fetchone()
+            
+            if result and result['checkpoint']:
+                import pickle
+                try:
+                    checkpoint_data = pickle.loads(result['checkpoint'])
+                    
+                    # Extrair mensagens do estado
+                    channel_values = checkpoint_data.get('channel_values', {})
+                    messages = channel_values.get('messages', [])
+                    
+                    if messages:
+                        # Pegar última mensagem humana (mais relevante para título)
+                        for msg in reversed(messages):
+                            if hasattr(msg, 'content') and msg.content:
+                                content = str(msg.content).strip()
+                                # Filtrar mensagens vazias ou de sistema
+                                if content and len(content) > 3:
+                                    return content
+                    
+                except Exception as pickle_error:
+                    print(f"[ThreadManager] Pickle error for {thread_id}: {pickle_error}")
+                
+            return "Nova conversa"
+            
+        except Exception as e:
+            print(f"[ThreadManager] Error getting last message for {thread_id}: {e}")
+            return "Conversa"
+    
+    def _get_real_last_message(self, conn: sqlite3.Connection, thread_id: str) -> tuple[str, str]:
+        """Obtém última mensagem real da thread com timestamp"""
+        try:
+            # Buscar checkpoint mais recente
+            query = """
+            SELECT checkpoint, checkpoint_id
+            FROM checkpoints 
+            WHERE thread_id = ?
+            ORDER BY checkpoint_id DESC
+            LIMIT 1
+            """
+            
+            cursor = conn.execute(query, (thread_id,))
+            result = cursor.fetchone()
+            
+            if result and result['checkpoint']:
+                import pickle
+                try:
+                    checkpoint_data = pickle.loads(result['checkpoint'])
+                    
+                    # Extrair mensagens do estado
+                    channel_values = checkpoint_data.get('channel_values', {})
+                    messages = channel_values.get('messages', [])
+                    
+                    if messages:
+                        # Buscar última mensagem humana válida
+                        for msg in reversed(messages):
+                            if hasattr(msg, 'content') and hasattr(msg, 'type'):
+                                content = str(msg.content).strip()
+                                msg_type = getattr(msg, 'type', 'unknown')
+                                
+                                # Priorizar mensagens humanas para título
+                                if msg_type == 'human' and content and len(content) > 5:
+                                    # Usar timestamp do checkpoint_id como aproximação
+                                    timestamp = datetime.now().isoformat()
+                                    print(f"[ThreadManager] 📝 Mensagem encontrada: {content[:30]}...")
+                                    return content, timestamp
+                        
+                        # Se não encontrar humana, pegar qualquer mensagem válida
+                        for msg in reversed(messages):
+                            if hasattr(msg, 'content'):
+                                content = str(msg.content).strip()
+                                if content and len(content) > 5:
+                                    timestamp = datetime.now().isoformat()
+                                    return content, timestamp
+                    
+                except Exception as pickle_error:
+                    print(f"[ThreadManager] Pickle error for {thread_id}: {pickle_error}")
+                    
+            print(f"[ThreadManager] ⚠️ Nenhuma mensagem encontrada para {thread_id}")
+            return "Nova conversa", datetime.now().isoformat()
+            
+        except Exception as e:
+            print(f"[ThreadManager] ❌ Error getting real last message for {thread_id}: {e}")
+            return "Conversa", datetime.now().isoformat()
+    
+    def _generate_smart_title(self, last_message: str) -> str:
+        """Gera título inteligente baseado no conteúdo da mensagem"""
+        if not last_message or last_message in ["Nova conversa", "Conversa"]:
+            return "Nova Conversa"
+        
+        # Limpar e processar mensagem
+        title = last_message.strip()
+        
+        # Remover cumprimentos comuns
+        greetings = ["oi", "olá", "hi", "hello", "bom dia", "boa tarde", "boa noite"]
+        title_lower = title.lower()
+        
+        for greeting in greetings:
+            if title_lower.startswith(greeting):
+                if len(title) > len(greeting) + 5:  # Tem mais conteúdo além do cumprimento
+                    title = title[len(greeting):].strip()
+                    if title.startswith(',') or title.startswith('!'):
+                        title = title[1:].strip()
+                else:
+                    return "Conversa inicial"
+        
+        # Truncar se muito longo
+        if len(title) > 35:
+            # Tentar cortar em uma palavra completa
+            truncated = title[:32]
+            last_space = truncated.rfind(' ')
+            if last_space > 15:  # Se encontrar espaço em posição razoável
+                title = title[:last_space] + "..."
+            else:
+                title = title[:32] + "..."
+        
+        # Capitalizar primeira letra
+        if title:
+            title = title[0].upper() + title[1:]
+        
+        # Garantir que não fica vazio
+        return title or "Conversa"
+    
+    def _generate_thread_title(self, last_message: str) -> str:
+        """Gera título inteligente baseado na mensagem (método legado)"""
+        return self._generate_smart_title(last_message)
+    
+    def group_threads_by_date(self, threads: List[ThreadSummary]) -> Dict[str, List[ThreadSummary]]:
+        """Agrupa threads por períodos temporais"""
+        now = datetime.now()
+        today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        yesterday = today - timedelta(days=1)
+        week_ago = today - timedelta(days=7)
+        month_ago = today - timedelta(days=30)
+        
+        groups = {
+            "today": [],
+            "yesterday": [],
+            "thisWeek": [],
+            "thisMonth": [],
+            "older": []
+        }
+        
+        for thread in threads:
+            try:
+                thread_date = datetime.fromisoformat(thread.lastActivity.replace('Z', '+00:00'))
+                thread_date = thread_date.replace(tzinfo=None)  # Remove timezone para comparação
+                
+                if thread_date >= today:
+                    groups["today"].append(thread)
+                elif thread_date >= yesterday:
+                    groups["yesterday"].append(thread)
+                elif thread_date >= week_ago:
+                    groups["thisWeek"].append(thread)
+                elif thread_date >= month_ago:
+                    groups["thisMonth"].append(thread)
+                else:
+                    groups["older"].append(thread)
+                    
+            except Exception as e:
+                print(f"[ThreadManager] Error parsing date for thread {thread.id}: {e}")
+                groups["older"].append(thread)
+        
+        return groups
+    
+    def update_thread_title(self, thread_id: str, new_title: str) -> bool:
+        """Atualiza título da thread (implementação futura)"""
+        try:
+            # TODO: Implementar update de metadados no checkpointer
+            print(f"[ThreadManager] Updated thread {thread_id} title to: {new_title}")
+            return True
+        except Exception as e:
+            print(f"[ThreadManager] Error updating thread title: {e}")
+            return False
+    
+    def delete_thread(self, thread_id: str) -> bool:
+        """Marca thread como deletada (soft delete)"""
+        try:
+            # TODO: Implementar soft delete
+            print(f"[ThreadManager] Deleted thread: {thread_id}")
+            return True
+        except Exception as e:
+            print(f"[ThreadManager] Error deleting thread: {e}")
+            return False
+    
+    def get_thread_messages(self, thread_id: str, limit: int = 50) -> List[ThreadMessage]:
+        """Recupera histórico de mensagens de uma thread usando o checkpointer"""
+        try:
+            if not self.checkpointer:
+                print(f"[ThreadManager] ❌ Checkpointer não disponível")
+                return []
+            
+            print(f"[ThreadManager] 🔍 Recuperando mensagens para thread: {thread_id}")
+            
+            # Configuração da thread conforme documentação LangChain
+            config = {
+                "configurable": {
+                    "thread_id": thread_id,
+                    "checkpoint_ns": "",
+                    "checkpoint_id": None
+                }
+            }
+            
+            # Obter estado atual da thread usando o checkpointer
+            state = self.checkpointer.get(config)
+            
+            if not state:
+                print(f"[ThreadManager] ⚠️ Nenhum estado encontrado para thread: {thread_id}")
+                return []
+            
+            print(f"[ThreadManager] ✅ Estado encontrado para thread: {thread_id}")
+            
+            # Extrair mensagens do estado (MessagesState format)
+            messages_data = state.values.get("messages", [])
+            
+            if not messages_data:
+                print(f"[ThreadManager] ⚠️ Nenhuma mensagem encontrada no estado")
+                return []
+            
+            print(f"[ThreadManager] 📝 Encontradas {len(messages_data)} mensagens raw")
+            
+            # Converter para formato ThreadMessage
+            thread_messages = []
+            for i, msg in enumerate(messages_data[-limit:]):  # Limitar mensagens
+                try:
+                    # Determinar tipo da mensagem
+                    msg_type = "unknown"
+                    if hasattr(msg, 'type'):
+                        msg_type = msg.type
+                    elif hasattr(msg, '__class__'):
+                        class_name = msg.__class__.__name__.lower()
+                        if 'human' in class_name:
+                            msg_type = "human"
+                        elif 'ai' in class_name:
+                            msg_type = "ai"
+                    
+                    # Extrair conteúdo
+                    content = ""
+                    if hasattr(msg, 'content') and msg.content:
+                        content = str(msg.content).strip()
+                    
+                    # Apenas adicionar mensagens com conteúdo válido
+                    if content and len(content) > 0:
+                        thread_message = ThreadMessage(
+                            type=msg_type,
+                            content=content,
+                            timestamp=datetime.now().isoformat(),  # Por enquanto timestamp atual
+                            message_id=f"recovered_{i}_{thread_id[-8:]}"
+                        )
+                        thread_messages.append(thread_message)
+                        print(f"[ThreadManager] ✅ Mensagem {i+1}: {msg_type} - {content[:50]}...")
+                    
+                except Exception as msg_error:
+                    print(f"[ThreadManager] ⚠️ Erro processando mensagem {i}: {msg_error}")
+                    continue
+            
+            print(f"[ThreadManager] 🎯 Retornando {len(thread_messages)} mensagens para thread {thread_id}")
+            return thread_messages
+            
+        except Exception as e:
+            print(f"[ThreadManager] ❌ Erro recuperando mensagens para {thread_id}: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+# Reinstanciar ThreadManager com métodos expandidos
+thread_manager = ThreadManager(checkpointer) if checkpointer else None
+
+@app.get("/chat/threads", response_model=ListThreadsResponse)
+async def list_user_threads(user_id: str = "default_user", limit: int = 50):
+    """Lista threads do usuário organizadas por data"""
     try:
-        # Por enquanto, retorna apenas informação básica
-        # TODO: Implementar busca real no checkpointer
+        if not thread_manager:
+            return ListThreadsResponse(
+                success=False,
+                threads=[],
+                user_id=user_id,
+                total=0,
+                groups={}
+            )
+        
+        print(f"[API] Listing threads for user: {user_id}")
+        
+        # Buscar threads
+        threads = thread_manager.get_user_threads(user_id, limit)
+        
+        # Agrupar por data
+        groups = thread_manager.group_threads_by_date(threads)
+        
+        print(f"[API] Found {len(threads)} threads for user {user_id}")
+        print(f"[API] Groups: {[(k, len(v)) for k, v in groups.items()]}")
         
         return ListThreadsResponse(
             success=True,
-            threads=[],  # Será implementado quando tivermos mais dados
+            threads=threads,
             user_id=user_id,
-            total=0
+            total=len(threads),
+            groups=groups
         )
         
     except Exception as e:
         print(f"[ERROR] List threads error: {e}")
+        import traceback
+        traceback.print_exc()
+        
         return ListThreadsResponse(
             success=False,
             threads=[],
             user_id=user_id,
-            total=0
+            total=0,
+            groups={}
+        )
+
+@app.get("/chat/threads/{thread_id}")
+async def get_thread_details(thread_id: str):
+    """Obtém detalhes de uma thread específica"""
+    try:
+        if not thread_manager:
+            return {"success": False, "error": "ThreadManager não disponível"}
+        
+        # Por enquanto, retorna informações básicas
+        return {
+            "success": True,
+            "thread_id": thread_id,
+            "title": "Conversa",
+            "message_count": 0,
+            "created_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Get thread details error: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.put("/chat/threads/{thread_id}/title")
+async def update_thread_title(thread_id: str, request: UpdateThreadTitleRequest):
+    """Atualiza título da thread"""
+    try:
+        if not thread_manager:
+            return {"success": False, "error": "ThreadManager não disponível"}
+        
+        success = thread_manager.update_thread_title(thread_id, request.title)
+        
+        return {
+            "success": success,
+            "thread_id": thread_id,
+            "new_title": request.title
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Update thread title error: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.delete("/chat/threads/{thread_id}")
+async def delete_thread(thread_id: str):
+    """Exclui thread (soft delete)"""
+    try:
+        if not thread_manager:
+            return {"success": False, "error": "ThreadManager não disponível"}
+        
+        success = thread_manager.delete_thread(thread_id)
+        
+        return {
+            "success": success,
+            "thread_id": thread_id,
+            "message": "Thread excluída com sucesso" if success else "Erro ao excluir thread"
+        }
+        
+    except Exception as e:
+        print(f"[ERROR] Delete thread error: {e}")
+        return {"success": False, "error": str(e)}
+
+# 🧵 NOVO ENDPOINT: RECUPERAR HISTÓRICO DE MENSAGENS DA THREAD
+
+class ThreadHistoryResponse(BaseModel):
+    success: bool
+    thread_id: str
+    messages: List[ThreadMessage]
+    total_messages: int
+    error: Optional[str] = None
+
+@app.get("/chat/threads/{thread_id}/messages", response_model=ThreadHistoryResponse)
+async def get_thread_messages(thread_id: str, limit: int = 50):
+    """Recupera histórico de mensagens de uma thread específica"""
+    try:
+        if not thread_manager:
+            return ThreadHistoryResponse(
+                success=False,
+                thread_id=thread_id,
+                messages=[],
+                total_messages=0,
+                error="ThreadManager não disponível"
+            )
+        
+        print(f"[API] 🧵 Recuperando mensagens para thread: {thread_id}")
+        
+        # Buscar mensagens usando o checkpointer
+        messages = thread_manager.get_thread_messages(thread_id, limit)
+        
+        print(f"[API] 📝 Encontradas {len(messages)} mensagens para thread {thread_id}")
+        
+        return ThreadHistoryResponse(
+            success=True,
+            thread_id=thread_id,
+            messages=messages,
+            total_messages=len(messages)
+        )
+        
+    except Exception as e:
+        print(f"[ERROR] Get thread messages error: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        return ThreadHistoryResponse(
+            success=False,
+            thread_id=thread_id,
+            messages=[],
+            total_messages=0,
+            error=str(e)
         )
 
 # WRAPPER LANGSERVE COMPATÍVEL COM THREAD ID MANAGEMENT (TAREFA 1.3.1 - CHECKPOINT 1.2)

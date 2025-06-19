@@ -80,7 +80,25 @@ A **personalidade base da Lina** foi implementada e está funcional para convers
 
 ### **🔄 Desenvolvimento Ativo (Tarefas 1.3.1 e 1.4)**
 
-#### **🧵 TAREFA 1.3.1: Sistema de Threading - PROGRESSO SIGNIFICATIVO**
+#### **🚨 PROBLEMAS CRÍTICOS IDENTIFICADOS - THREADING**
+
+**Status (17/06/2025): SISTEMA COM FALHAS GRAVES DE PERSISTÊNCIA**
+
+❌ **PROBLEMAS URGENTES DESCOBERTOS:**
+- **Pickle Errors**: `unpickling stack underflow` em todas as threads no SQLite
+- **Mensagens não recuperadas**: `⚠️ Nenhuma mensagem encontrada` para todas threads
+- **Histórico threads inoperante**: Clicar numa thread antiga não carrega o histórico
+- **Sidebar sem dados reais**: Threads listadas mas sem conteúdo/contexto  
+- **Datas/horários não funcionam**: Timestamps não são exibidos corretamente
+- **Persistência quebrada**: Reiniciar servidor perde contexto das conversas
+
+**🔧 DIAGNÓSTICO NECESSÁRIO:**
+1. **SQLite Checkpointer**: Problema na serialização/deserialização com LangGraph
+2. **LangGraph State**: Possível incompatibilidade com o StateGraph atual
+3. **Message Storage**: Sistema de armazenamento pode estar corrompido
+4. **Thread Recovery**: Lógica de recuperação de threads falha completamente
+
+#### **🧵 TAREFA 1.3.1: Sistema de Threading - PROGRESSO SIGNIFICATIVO (COM FALHAS)**
 
 **✅ CHECKPOINT 1.1: SQLite Checkpointer ✅ CONCLUÍDO (16/06/2025)**
 - 🗄️ **SQLite Database**: `lina-backend/lina_conversations.db` com WAL mode ativo
@@ -145,6 +163,28 @@ A **personalidade base da Lina** foi implementada e está funcional para convers
 - **3.1**: Fluxo de Nova Conversa completo
 - **3.2**: Fluxo de Mensagem com Threading
 - **3.3**: Persistência automática e validação
+
+#### **📱 TAREFA 1.3.2: Sidebar de Threads - PARCIAL ✅ UI FUNCIONAL ❌ BACKEND PENDENTE**
+
+**✅ INTERFACE FUNCIONANDO (17/06/2025)**
+- 🎨 **Layout completo**: Sidebar esquerda com grupos organizados
+- ✅ **Colapso/expansão**: Botão ◀ colapsa, botão ▶ expande corretamente
+- 🎯 **Estados visuais**: "Hoje", "Ontem", "Esta Semana", "Este Mês", "Mais Antigo"
+- 💬 **Estado vazio**: "Nenhuma conversa ainda" + botão "Iniciar Primeira Conversa"
+- 🔧 **CSS integrado**: Design system mantido, sem quebrar layout existente
+- ⚡ **JavaScript robusto**: Sem erros no console, eventos funcionais
+
+**❌ INTEGRAÇÃO BACKEND PENDENTE**
+- 🔌 **API `/chat/threads`**: Não está carregando threads do SQLite
+- 📊 **Histórico vazio**: Threads novas e antigas não aparecem na sidebar
+- 🔄 **Sincronização**: Sidebar não reflete thread ativa do chat principal
+- 🗄️ **SQLite query**: Endpoint precisa implementar busca no `lina_conversations.db`
+
+**🎯 PRÓXIMA REVISÃO:**
+- Implementar endpoint backend para listar threads do SQLite
+- Conectar sidebar JavaScript com API de threads
+- Sincronizar thread ativa entre chat principal e sidebar
+- Testar navegação entre conversas históricas
 
 O backend receberá configuração do `SqliteSaver` do LangGraph criando arquivo `lina_conversations.db`, modificação do wrapper principal para adicionar parâmetro `thread_id`, enriquecimento do `debug_info` com identificadores de thread e mensagem, e implementação do endpoint `POST /chat/new-thread`. O frontend será atualizado com botão "Nova Conversa", display de thread ID atual, reestruturação do debug panel em seções "Última Mensagem", "Sessão Atual", e futuramente "Histórico Expandível" onde cada mensagem individual poderá ser expandida mostrando request/response JSON completo, métricas detalhadas, e logs de execução.
 

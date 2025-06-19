@@ -4,17 +4,19 @@
 
 ```
 lina-frontend/
-├── index.html              📄 Página principal da aplicação
+├── index.html                 📄 Página principal da aplicação
 ├── css/
-│   ├── main.css           🎨 Design system e estilos globais
-│   ├── chat.css           💬 Interface de conversação
-│   └── debug-panel.css    🔍 Painel de métricas
+│   ├── main.css              🎨 Design system e estilos globais
+│   ├── chat.css              💬 Interface de conversação
+│   ├── debug-panel.css       🔍 Painel de métricas
+│   └── threads-sidebar.css   📝 Sidebar de navegação de threads
 ├── js/
-│   ├── app.js             🚀 Orquestração principal
-│   ├── chat.js            💭 Lógica do chat
-│   ├── debug-panel.js     📊 Painel de debug
-│   └── api.js             🌐 Cliente HTTP
-└── FRONTEND_MAP.md        📋 Este arquivo (mapa)
+│   ├── app.js                🚀 Orquestração principal
+│   ├── chat.js               💭 Lógica do chat
+│   ├── debug-panel.js        📊 Painel de debug
+│   ├── threads-sidebar.js    🧵 Sidebar de navegação de threads
+│   └── api.js                🌐 Cliente HTTP
+└── FRONTEND_MAP.md           📋 Este arquivo (mapa)
 ```
 
 ---
@@ -536,25 +538,25 @@ resetSession() {
 
 ---
 
-## ✅ **FUNCIONALIDADES CONCLUÍDAS**
+## ✅**FFUNCNONNLIICOENCCÍNCLUÍDAS
 
-### 🔧 **Debug Panel - Resize Handle**
-**Status**: ✅ **TOTALMENTE FUNCIONAL**
+### ��***Debug Pbneu - R nez*Hnl**
+**Status**:✅ TOTALMENTE**
 
-#### **Características**
-- ✅ **Resize para esquerda**: Expande corretamente pegando espaço do chat
-- ✅ **Visual feedback**: Handle visível com hover effects
-- ✅ **Limites inteligentes**: Min 280px, max 60% da tela
-- ✅ **Persistência**: Largura salva no localStorage
-- ✅ **Responsividade**: Funciona em diferentes resoluções
+####**aracterísticas
+- ✅ **Res#z# p**aCacteríst**:iExcadcorrtamepgn pçodo ch
+- ✅ **Vualfebk**:Hndlevívlm ho effect
+- ✅ **Limiteitelgente**:Min280x, max 60% aa
+-*✅ *VPer isfência**: Laegeack:Hava no localStoragele visível com hover effects
+- ✅***RespResisidadp**: Funcions emddiferentesiresoluçõeserentes resoluções
 
-#### **Localização**
-- **Arquivo**: `js/debug-panel.js` → `setupResizing()`
-- **CSS**: `css/debug-panel.css` → `.resize-handle`
+#### **L*caoizjs/d**
+-e**Arquivo**:g`j-/aneug-plnel.js`S→d`e-aupRlsizss``
+-**SS**:`css/eug-pnel.ss` → `.resiz-hale`
 
 ---
 
-### 📜 **Debug Panel - Scroll Geral**
+###r📜a**DebuglPanel*-*ScrollGeral**
 **Status**: ✅ **TOTALMENTE FUNCIONAL**
 
 #### **Características**
@@ -600,4 +602,208 @@ resetSession() {
 
 ---
 
+## 🚨 **PROBLEMAS CRÍTICOS IDENTIFICADOS**
 
+### 📍 Status: 17/06/2025 - SISTEMA COM FALHAS GRAVES
+
+#### **🔴 THREADING BACKEND COM FALHAS CRÍTICAS**
+
+Após análise detalhada dos logs do backend, foram identificados **problemas graves** que impedem o funcionamento completo do sistema de threads:
+
+##### **❌ PROBLEMAS URGENTES DESCOBERTOS**
+
+1. **🔴 Pickle Serialization Errors**
+   - **Erro**: `unpickling stack underflow` em todas as 33 threads no SQLite
+   - **Impacto**: Nenhuma mensagem histórica pode ser recuperada
+   - **Logs**: `[ThreadManager] Pickle error for thread_default_user_*: unpickling stack underflow`
+
+2. **🔴 Message Recovery Failed**
+   - **Erro**: `⚠️ Nenhuma mensagem encontrada` para todas as threads
+   - **Impacto**: Histórico de conversas completamente inacessível
+   - **Logs**: `[ThreadManager] ⚠️ Nenhuma mensagem encontrada para thread_*`
+
+3. **🔴 Thread Sidebar Empty**
+   - **Erro**: Threads listadas mas sem conteúdo real
+   - **Impacto**: Sidebar mostra apenas "Nova Conversa" sem dados históricos
+   - **Causa**: Backend não consegue deserializar state do SQLite
+
+4. **🔴 Date/Time Display Broken**
+   - **Erro**: Timestamps não são exibidos corretamente na sidebar
+   - **Impacto**: Agrupamento temporal não funciona
+   - **Causa**: Metadata corrompida no SQLite
+
+5. **🔴 Conversation Persistence Broken**
+   - **Erro**: Reiniciar servidor perde contexto das conversas
+   - **Impacto**: Sistema não consegue manter continuidade entre sessões
+   - **Causa**: LangGraph StateGraph incompatível com SQLite checkpointer atual
+
+##### **🔧 ROOT CAUSE ANALYSIS**
+
+1. **LangGraph + SQLite Incompatibilidade**
+   ```
+   [ThreadManager] Pickle error: unpickling stack underflow
+   ```
+   - Possível incompatibilidade entre versão do LangGraph e SQLite serialization
+   - StateGraph pode estar usando estrutura que não serializa corretamente
+
+2. **Message State Corruption**
+   - MessagesState no LangGraph pode ter objetos não-serializáveis
+   - Possível problema com tipos complexos (HumanMessage, AIMessage)
+
+3. **SQLite WAL Mode Issues**
+   - WAL (Write-Ahead Logging) pode estar causando problemas de concorrência
+   - Checkpoints podem estar sendo escritos de forma corrompida
+
+##### **🎯 AÇÕES NECESSÁRIAS URGENTES**
+
+1. **Diagnóstico Profundo do SQLite**
+   - Examinar estrutura das tabelas `checkpoints` e `writes`
+   - Verificar se dados estão sendo escritos corretamente
+   - Testar deserialização manual dos pickles
+
+2. **Revision do LangGraph StateGraph**
+   - Verificar se MessagesState está usando tipos serializáveis
+   - Considerar StateGraph customizado sem objetos complexos
+   - Testar com StateGraph mais simples
+
+3. **Alternative Checkpointer**
+   - Considerar MemorySaver temporário para testes
+   - Implementar custom checkpointer se necessário
+   - Avaliar outros backends além do SQLite
+
+4. **Message Recovery Strategy**
+   - Implementar fallback para recovery de mensagens
+   - Adicionar logging detalhado do serialization process
+   - Criar sistema de backup de conversations
+
+##### **📊 IMPACTO NO SISTEMA**
+
+- **✅ FUNCIONANDO**: Interface de threading (colapso/expansão, nova conversa)
+- **✅ FUNCIONANDO**: Debug panel com métricas em tempo real
+- **✅ FUNCIONANDO**: Thread ID management e display
+- **❌ QUEBRADO**: Histórico de conversas e persistência
+- **❌ QUEBRADO**: Sidebar de threads com dados reais
+- **❌ QUEBRADO**: Continuidade entre sessões
+- **❌ QUEBRADO**: Recovery de threads antigas
+
+##### **🎯 PRIORIDADE DE CORREÇÃO**
+
+1. **🔴 CRÍTICO**: Corrigir serialization/deserialization do LangGraph
+2. **🔴 CRÍTICO**: Implementar recovery básico de mensagens
+3. **🟡 ALTA**: Conectar sidebar com dados reais do backend
+4. **🟡 ALTA**: Implementar navegação entre threads históricas
+5. **🟢 MÉDIA**: Otimizar performance do SQLite checkpointer
+
+---
+
+## 📝 **SIDEBAR DE THREADS**
+
+### 📍 Localização: `css/threads-sidebar.css` + `js/threads-sidebar.js`
+
+#### **🎯 STATUS ATUAL (17/06/2025): INTERFACE FUNCIONAL, BACKEND QUEBRADO**
+
+##### **✅ INTERFACE FUNCIONAL**
+- **Layout completo**: Sidebar esquerda com grupos organizados (Hoje, Ontem, Esta Semana, Este Mês, Mais Antigo)
+- **Colapso/expansão**: Botão ◀ colapsa sidebar, botão ▶ azul no canto superior esquerdo expande
+- **Estado vazio**: Exibe "Nenhuma conversa ainda" com botão "Iniciar Primeira Conversa"
+- **CSS integrado**: Design system mantido, sem quebrar layout existente
+- **JavaScript robusto**: Sem erros no console, event listeners funcionais
+- **Responsividade**: Sidebar vira overlay em mobile
+
+##### **❌ INTEGRAÇÃO BACKEND PENDENTE**
+- **API `/chat/threads`**: Não está carregando threads do SQLite
+- **Histórico vazio**: Threads novas e antigas não aparecem na sidebar
+- **Sincronização**: Sidebar não reflete thread ativa do chat principal
+- **SQLite query**: Endpoint precisa implementar busca real no `lina_conversations.db`
+
+#### **🎨 Estrutura Visual**
+```
+┌─────────────────────┐
+│ 📝 Conversas    + 🔍 ◀ │ ← Header com busca e colapso
+├─────────────────────┤
+│ 📁 Hoje         (0) ▼│
+│ 📁 Ontem       (0) ▼│ ← Grupos organizados temporalmente
+│ 📁 Esta Semana (0) ▼│
+│ 📁 Este Mês    (0) ▼│
+│ 📁 Mais Antigo (0) ▼│
+├─────────────────────┤
+│     📭              │
+│ Nenhuma conversa    │ ← Estado vazio
+│      ainda          │
+│                     │
+│ [Iniciar Primeira   │
+│      Conversa]      │
+└─────────────────────┘
+```
+
+#### **🔧 Classes CSS Principais**
+```css
+.threads-sidebar              /* Container principal */
+.threads-header               /* Header com título e ações */
+.threads-actions              /* Botões de ação (nova, busca, colapso) */
+.threads-content              /* Área de conteúdo com scroll */
+.threads-group                /* Grupo temporal (Hoje, Ontem, etc.) */
+.group-header                 /* Cabeçalho do grupo (clicável) */
+.thread-item                  /* Item individual de thread */
+.threads-empty                /* Estado vazio */
+.threads-sidebar.collapsed    /* Estado colapsado */
+.threads-expand-btn           /* Botão de expansão (quando colapsado) */
+```
+
+#### **⚡ Funcionalidades JavaScript**
+```javascript
+// Classe principal: ThreadSidebar
+new ThreadSidebar()           // Inicialização automática
+.collapse()                   // Colapsar sidebar
+.expand()                     // Expandir sidebar
+.loadThreads()                // ❌ Carregar threads (pendente backend)
+.toggleGroup(groupName)       // Expandir/colapsar grupos
+.switchToThread(threadId)     // ❌ Navegar para thread (pendente)
+```
+
+#### **🎨 Estados e Interações**
+- **Colapso**: Sidebar desaparece, botão ▶ aparece no header
+- **Expansão**: Botão ▶ some, sidebar reaparece com animação
+- **Grupos**: Podem ser expandidos/colapsados individualmente
+- **Busca**: Campo de busca implementado (funciona com dados mockados)
+- **Redimensionamento**: Handle de resize funcional no lado direito
+
+#### **📱 Responsividade**
+- **Desktop**: Sidebar fixa no lado esquerdo (280px padrão)
+- **Mobile**: Sidebar vira overlay com backdrop escuro
+- **Botões**: Texto oculto em telas pequenas (só ícones)
+
+#### **🔄 Integração com Sistema Threading**
+```javascript
+// Conectores implementados mas sem backend:
+window.threadSidebar         // Instância global
+.syncWithChat(threadId)      // ❌ Sincronizar thread ativa
+.refresh()                   // ❌ Recarregar lista
+.getActiveThreadId()         // ❌ Obter thread atual
+```
+
+#### **🎯 PRÓXIMOS PASSOS PARA COMPLETAR**
+1. **Backend**: Implementar endpoint `/chat/threads` que retorna lista do SQLite
+2. **JavaScript**: Conectar `loadThreads()` com API real
+3. **Sincronização**: Fazer sidebar refletir thread ativa do chat
+4. **Navegação**: Implementar click em thread → carregar conversa
+5. **Estados**: Gerenciar thread ativa visualmente
+
+#### **📊 Logs de Funcionamento Atual**
+```javascript
+[Threads] 🚀 Inicializando sidebar de threads
+[Threads] ✅ Sidebar inicializada com sucesso
+[Threads] ✅ 0 threads carregadas              // ← Vazio por falta de backend
+[Threads] 📊 Grupos: []                        // ← Sem dados do SQLite
+[Threads] ◀ Sidebar colapsada
+[Threads] ▶ Sidebar expandida
+```
+
+#### **🎨 Customizações Disponíveis**
+- **Largura**: Ajustar `min-width`/`max-width` em `.threads-sidebar`
+- **Grupos**: Modificar lógica temporal em `groupThreadsByDate()`
+- **Cores**: Usar variáveis CSS do design system
+- **Ícones**: Trocar emojis por outros símbolos
+- **Animações**: Ajustar `transition` para velocidade diferente
+
+---

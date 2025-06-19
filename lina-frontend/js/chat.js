@@ -200,6 +200,44 @@ class ChatManager {
     }
 
     /**
+     * 🧵 NOVO: Adiciona mensagem do histórico sem incrementar contadores
+     */
+    addMessageToHistory(content, type = 'assistant', timestamp = null, shouldScroll = true) {
+        const messageElement = document.createElement('div');
+        messageElement.className = `message ${type}-message history-message`;
+        
+        const contentElement = document.createElement('div');
+        contentElement.className = 'message-content';
+        contentElement.innerHTML = this.formatMessage(content);
+        
+        const timeElement = document.createElement('div');
+        timeElement.className = 'message-time';
+        
+        // Usar timestamp fornecido ou criar um novo
+        if (timestamp) {
+            try {
+                const date = new Date(timestamp);
+                timeElement.textContent = this.formatTime(date);
+            } catch (error) {
+                timeElement.textContent = this.formatTime(new Date());
+            }
+        } else {
+            timeElement.textContent = this.formatTime(new Date());
+        }
+        
+        messageElement.appendChild(contentElement);
+        messageElement.appendChild(timeElement);
+        
+        this.messagesContainer.appendChild(messageElement);
+        
+        if (shouldScroll) {
+            this.scrollToBottom();
+        }
+        
+        // NÃO incrementar messageCount - é histórico recuperado
+    }
+
+    /**
      * Formata mensagem (básico - pode ser expandido para Markdown)
      */
     formatMessage(content) {
@@ -374,6 +412,98 @@ class ChatManager {
         
         // Fallback: últimos 8 caracteres
         return threadId.slice(-8);
+    }
+
+    /**
+     * 🧵 NOVA FUNCIONALIDADE: Carrega thread específica com histórico real
+     */
+    async loadThread(threadId) {
+        try {
+            console.log(`[Chat] 🧵 Carregando thread: ${threadId}`);
+            
+            // Mostrar loading
+            this.setProcessing(true);
+            
+            // Limpar chat atual
+            this.clearChat();
+            
+            // Definir nova thread como ativa
+            this.currentThreadId = threadId;
+            this.conversationStarted = true;
+            
+            // Atualizar display
+            this.updateThreadDisplay();
+            
+            // Atualizar debug panel
+            if (window.debugPanel) {
+                window.debugPanel.updateThreadInfo(threadId);
+            }
+            
+            // Sincronizar com sidebar
+            if (window.threadSidebar) {
+                window.threadSidebar.setActiveThread(threadId);
+            }
+            
+            // 🆕 CARREGAMENTO REAL DO HISTÓRICO VIA API
+            console.log(`[Chat] 📝 Buscando histórico da thread...`);
+            const threadData = await window.linaAPI.loadThread(threadId);
+            
+            if (threadData.success && threadData.messages && threadData.messages.length > 0) {
+                console.log(`[Chat] 📝 Carregando ${threadData.messages.length} mensagens do histórico`);
+                
+                // Carregar mensagens na ordem correta
+                threadData.messages.forEach((message, index) => {
+                    try {
+                        // Determinar tipo da mensagem
+                        let messageType = 'assistant'; // Padrão
+                        if (message.type === 'human') {
+                            messageType = 'user';
+                        } else if (message.type === 'ai') {
+                            messageType = 'assistant';
+                        }
+                        
+                        // Adicionar mensagem ao chat
+                        this.addMessageToHistory(message.content, messageType, message.timestamp, false);
+                        
+                        console.log(`[Chat] 📝 Mensagem ${index + 1} carregada: ${messageType} - ${message.content.substring(0, 50)}...`);
+                        
+                    } catch (msgError) {
+                        console.error(`[Chat] ❌ Erro ao carregar mensagem ${index}:`, msgError);
+                    }
+                });
+                
+                // Atualizar contadores
+                this.messageCount = threadData.messages.length;
+                
+                // Atualizar debug panel com contador correto
+                if (window.debugPanel) {
+                    window.debugPanel.updateSessionCount(this.messageCount);
+                }
+                
+                // Adicionar mensagem informativa sobre carregamento
+                this.addMessage(`✅ Histórico carregado: ${threadData.total_messages} mensagens recuperadas`, 'system');
+                
+                console.log(`[Chat] ✅ Thread carregada com ${threadData.total_messages} mensagens`);
+                
+            } else if (threadData.success && threadData.total_messages === 0) {
+                // Thread vazia, apenas informar
+                this.addMessage(`📝 Thread iniciada (${this.formatThreadIdForDisplay(threadId)}) - Histórico vazio`, 'system');
+                console.log(`[Chat] ℹ️ Thread vazia carregada: ${threadId}`);
+                
+            } else {
+                // Erro ou formato inesperado
+                console.warn(`[Chat] ⚠️ Formato inesperado na resposta da thread:`, threadData);
+                this.addMessage(`⚠️ Thread carregada com limitações (${this.formatThreadIdForDisplay(threadId)})`, 'system');
+            }
+            
+        } catch (error) {
+            console.error(`[Chat] ❌ Erro ao carregar thread ${threadId}:`, error);
+            this.addMessage(`❌ Erro ao carregar conversa: ${error.message}`, 'error');
+            
+        } finally {
+            // Esconder loading
+            this.setProcessing(false);
+        }
     }
 
     /**
