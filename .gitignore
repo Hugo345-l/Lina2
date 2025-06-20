@@ -1,0 +1,25 @@
+# Ambiente Virtual
+venv-lina/
+
+# Cache e arquivos compilados do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de ambiente e segredos
+.env
+.env.*
+!.env.example
+# .env.keys
+
+# Arquivos de IDE e sistema operacional
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+
+# Arquivos e diretórios legados
+legacy/
+lina-backend/
+lina-frontend/
