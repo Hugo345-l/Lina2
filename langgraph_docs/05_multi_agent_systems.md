@@ -1,119 +1,75 @@
-# 5. Sistemas Multi-Agente
+# Sistemas Multi-Agente
 
-O `langgraph` é excelente para orquestrar múltiplos agentes que colaboram para resolver problemas complexos. Existem duas arquiteturas principais para isso: **Supervisor** e **Swarm (Enxame)**.
+O LangGraph é ideal para orquestrar múltiplos agentes que colaboram para resolver um problema. Existem vários padrões para conseguir isso.
 
-## Arquitetura de Supervisor
+## Padrão Supervisor
 
-Neste padrão, um agente "supervisor" atua como um roteador inteligente. Ele recebe a tarefa inicial e a delega para o agente especialista mais apropriado. Após o especialista concluir sua parte, o controle retorna ao supervisor, que pode então delegar a próxima etapa para outro agente ou finalizar a tarefa.
+Neste padrão, um "supervisor" LLM atua como um roteador, delegando tarefas para agentes trabalhadores especializados.
 
--   **Vantagem:** Controle centralizado, fluxo de trabalho claro e hierárquico.
--   **Ideal para:** Tarefas que podem ser divididas em etapas sequenciais e distintas.
+### Implementação
 
-### Exemplo com `langgraph-supervisor`
+1.  **Definir Agentes Trabalhadores**: Crie agentes especializados (por exemplo, `research_agent`, `math_agent`) usando `create_react_agent`.
+2.  **Definir Ferramentas de Handoff**: Crie ferramentas que os agentes podem usar para delegar tarefas uns aos outros ou de volta ao supervisor. A primitiva `Command(goto=...)` é usada para transferir o controle.
+3.  **Definir o Supervisor**: Crie um agente supervisor que tenha acesso às ferramentas de handoff.
+4.  **Construir o Grafo**: Adicione os agentes como nós e defina as arestas para que o controle sempre retorne ao supervisor após a conclusão de uma tarefa.
 
-O pacote `langgraph-supervisor` simplifica a criação dessa arquitetura.
+### Exemplo de Supervisor
 
 ```python
-from langchain_openai import ChatOpenAI
-from langgraph.prebuilt import create_react_agent
-from langgraph_supervisor import create_supervisor
+from langgraph.graph import StateGraph, START, END, MessagesState
+from langgraph.types import Command, Send
 
-# 1. Defina as ferramentas e os agentes especialistas
-def book_hotel(hotel_name: str):
-    """Reserva um hotel."""
-    return f"Reserva no '{hotel_name}' confirmada."
+# ... (definição do research_agent e math_agent) ...
 
-def book_flight(from_airport: str, to_airport: str):
-    """Reserva um voo."""
-    return f"Voo de {from_airport} para {to_airport} confirmado."
+def create_task_description_handoff_tool(*, agent_name: str, description: str | None = None):
+    # ... (cria uma ferramenta que retorna um Command(goto=...)) ...
 
-flight_assistant = create_react_agent(
-    model=ChatOpenAI(model="gpt-4o"),
-    tools=[book_flight],
-    prompt="Você é um assistente de reserva de voos.",
-    name="flight_assistant"
+supervisor_agent = create_react_agent(
+    model="openai:gpt-4.1",
+    tools=[assign_to_research_agent_with_description, assign_to_math_agent_with_description],
+    # ... (prompt do supervisor) ...
 )
 
-hotel_assistant = create_react_agent(
-    model=ChatOpenAI(model="gpt-4o"),
-    tools=[book_hotel],
-    prompt="Você é um assistente de reserva de hotéis.",
-    name="hotel_assistant"
+supervisor_graph = (
+    StateGraph(MessagesState)
+    .add_node(supervisor_agent, destinations=("research_agent", "math_agent", END))
+    .add_node(research_agent)
+    .add_node(math_agent)
+    .add_edge(START, "supervisor")
+    .add_edge("research_agent", "supervisor")
+    .add_edge("math_agent", "supervisor")
+    .compile()
 )
-
-# 2. Crie o supervisor
-# O supervisor gerencia os agentes especialistas
-supervisor = create_supervisor(
-    agents=[flight_assistant, hotel_assistant],
-    model=ChatOpenAI(model="gpt-4o"),
-    prompt="Você gerencia um assistente de voos e um de hotéis. Delegue o trabalho para eles."
-).compile()
-
-# 3. Execute o sistema
-query = {
-    "messages": [
-        ("user", "Reserve um voo de GRU para REC e uma estadia no Mar Hotel")
-    ]
-}
-for chunk in supervisor.stream(query):
-    print(chunk)
-    print("----")
 ```
 
-## Arquitetura Swarm (Enxame)
+## Padrão Swarm
 
-Neste padrão, não há um supervisor central. Os agentes podem passar o controle diretamente uns para os outros. Cada agente tem uma ferramenta de "handoff" (transferência) que lhe permite delegar a tarefa a outro agente específico.
-
--   **Vantagem:** Mais flexível e descentralizado. Permite uma colaboração mais dinâmica.
--   **Ideal para:** Tarefas onde a ordem de execução não é rígida e os agentes precisam colaborar de forma mais fluida.
-
-### Exemplo com `langgraph-swarm`
-
-O pacote `langgraph-swarm` facilita a criação de sistemas de enxame.
+O `langgraph-swarm` é um pacote que simplifica a criação de sistemas onde os agentes podem passar o controle diretamente uns para os outros.
 
 ```python
-from langgraph.prebuilt import create_react_agent
 from langgraph_swarm import create_swarm, create_handoff_tool
 
-# 1. Crie as ferramentas de handoff
-transfer_to_hotel = create_handoff_tool(
-    agent_name="hotel_assistant",
-    description="Transfere para o assistente de hotéis.",
-)
-transfer_to_flight = create_handoff_tool(
-    agent_name="flight_assistant",
-    description="Transfere para o assistente de voos.",
-)
+# Ferramentas de Handoff
+transfer_to_hotel_assistant = create_handoff_tool(...)
+transfer_to_flight_assistant = create_handoff_tool(...)
 
-# (Defina as ferramentas book_hotel e book_flight como no exemplo anterior)
-
-# 2. Defina os agentes, incluindo as ferramentas de handoff
+# Agentes
 flight_assistant = create_react_agent(
-    model=ChatOpenAI(model="gpt-4o"),
-    tools=[book_flight, transfer_to_hotel], # Adiciona a ferramenta de handoff
-    prompt="Você é um assistente de voos.",
+    model="anthropic:claude-3-5-sonnet-latest",
+    tools=[book_flight, transfer_to_hotel_assistant],
     name="flight_assistant"
 )
-
 hotel_assistant = create_react_agent(
-    model=ChatOpenAI(model="gpt-4o"),
-    tools=[book_hotel, transfer_to_flight], # Adiciona a ferramenta de handoff
-    prompt="Você é um assistente de hotéis.",
+    model="anthropic:claude-3-5-sonnet-latest",
+    tools=[book_hotel, transfer_to_flight_assistant],
     name="hotel_assistant"
 )
 
-# 3. Crie o swarm
+# Criar o Swarm
 swarm = create_swarm(
     agents=[flight_assistant, hotel_assistant],
-    default_active_agent="flight_assistant" # Define o agente inicial
+    default_active_agent="flight_assistant"
 ).compile()
 
-# 4. Execute o sistema
-query = {
-    "messages": [
-        ("user", "Reserve um voo de GRU para REC e uma estadia no Mar Hotel")
-    ]
-}
-for chunk in swarm.stream(query):
-    print(chunk)
-    print("----")
+# Executar
+swarm.invoke(...)

@@ -1,89 +1,112 @@
-# 1. Introdução e Primeiros Passos com LangGraph
+# Guia de Início Rápido do LangGraph
 
-Este documento cobre os conceitos básicos para começar a desenvolver com `langgraph`.
+Esta seção aborda os conceitos básicos para começar a usar o LangGraph, incluindo a instalação, a criação de um agente simples e a definição de um fluxo de trabalho básico.
 
 ## Instalação
 
-Para usar o `langgraph`, você precisa instalá-lo via `pip`. É recomendado também instalar `langsmith` para depuração e `langchain-openai` (ou outro provedor de modelo) para interagir com LLMs.
+Para começar, você precisa instalar os pacotes necessários.
 
 ```bash
-pip install -U langgraph langsmith langchain-openai
+pip install -U langgraph langchain
 ```
 
-Para utilizar a Interface de Linha de Comando (CLI) do `langgraph`, que é muito útil para desenvolvimento, instale-a com o extra `inmem`:
+Se você planeja usar modelos da Anthropic, também precisará instalar a biblioteca específica:
 
 ```bash
-pip install -U "langgraph-cli[inmem]"
+pip install langchain-anthropic
 ```
 
-## Conceitos Fundamentais
+## Criando um Agente ReAct Simples
 
-A principal abstração no `langgraph` é o **Grafo de Estados (`StateGraph`)**. Ele é composto por:
-
--   **Estado (`State`):** Um `TypedDict` do Python que define a estrutura de dados que será passada entre os nós do grafo. Ele representa o estado da sua aplicação em qualquer ponto.
--   **Nós (`Nodes`):** Funções Python que realizam o trabalho. Cada nó recebe o estado atual como argumento e retorna um dicionário que atualiza esse estado.
--   **Arestas (`Edges`):** Conexões que definem o fluxo de execução. Você define de qual nó para qual nó o estado deve passar. Existem também arestas condicionais, que podem rotear o fluxo com base em uma função.
--   **`START` e `END`:** Nós especiais que marcam o início e o fim do fluxo do grafo.
-
-### Exemplo Básico: Gerador de Piadas
-
-Este exemplo demonstra como criar um grafo simples com dois nós.
+Um dos componentes pré-construídos mais úteis do LangGraph é o `create_react_agent`. Ele permite que você crie rapidamente um agente que pode usar ferramentas.
 
 ```python
-from typing import TypedDict
-from langgraph.graph import StateGraph, START, END
+from langgraph.prebuilt import create_react_agent
 
-# 1. Defina a estrutura do estado
-class JokeState(TypedDict):
-  topic: str
-  joke: str
+def get_weather(city: str) -> str:
+    """Get weather for a given city."""
+    return f"It's always sunny in {city}!"
 
-# 2. Defina as funções dos nós
-def refine_topic(state: JokeState) -> dict:
-    """Este nó adiciona um detalhe ao tópico da piada."""
-    print("---REFINING TOPIC---")
-    return {"topic": state["topic"] + " and cats"}
+agent = create_react_agent(
+    model="anthropic:claude-3-7-sonnet-latest",
+    tools=[get_weather],
+    prompt="You are a helpful assistant"
+)
 
-def generate_joke(state: JokeState) -> dict:
-    """Este nó gera a piada com base no tópico refinado."""
-    print("---GENERATING JOKE---")
-    return {"joke": f"Here is a joke about {state['topic']}"}
-
-# 3. Construa o grafo
-graph_builder = StateGraph(JokeState)
-
-# Adicione os nós ao grafo
-graph_builder.add_node("refine_topic", refine_topic)
-graph_builder.add_node("generate_joke", generate_joke)
-
-# Conecte os nós com arestas para definir o fluxo
-graph_builder.add_edge(START, "refine_topic")
-graph_builder.add_edge("refine_topic", "generate_joke")
-graph_builder.add_edge("generate_joke", END)
-
-# 4. Compile o grafo
-graph = graph_builder.compile()
-
-# 5. Execute o grafo
-initial_state = {"topic": "dogs"}
-final_state = graph.invoke(initial_state)
-
-print("\n---FINAL RESULT---")
-print(final_state['joke'])
+# Executando o agente
+agent.invoke(
+    {"messages": [{"role": "user", "content": "what is the weather in sf"}]}
+)
 ```
 
-## Servidor de Desenvolvimento
+## Definindo um Fluxo de Trabalho (Workflow) Básico
 
-A CLI do `langgraph` é uma ferramenta poderosa para desenvolvimento local.
+O `StateGraph` é o principal bloco de construção para criar fluxos de trabalho no LangGraph. Você define um estado e, em seguida, adiciona nós e arestas para criar um grafo.
 
--   **Para iniciar o servidor:**
-    ```bash
-    langgraph dev
-    ```
-    Este comando inicia um servidor local e abre o **LangGraph Studio** no seu navegador. O Studio permite visualizar a execução do seu grafo passo a passo, inspecionar o estado e depurar de forma interativa.
+### 1. Definir o Estado
 
--   **Para iniciar com depuração remota:**
-    ```bash
-    langgraph dev --debug-port 5678
-    ```
-    Isso permite que você anexe um depurador como o do VS Code ou PyCharm.
+O estado é um `TypedDict` que define a estrutura de dados que será passada entre os nós.
+
+```python
+from typing import Annotated
+from typing_extensions import TypedDict
+from langgraph.graph.message import add_messages
+
+class State(TypedDict):
+    messages: Annotated[list, add_messages]
+```
+
+### 2. Inicializar o `StateGraph`
+
+```python
+from langgraph.graph import StateGraph
+
+graph_builder = StateGraph(State)
+```
+
+### 3. Definir os Nós
+
+Os nós são funções que operam no estado.
+
+```python
+from langchain.chat_models import init_chat_model
+
+llm = init_chat_model("anthropic:claude-3-5-sonnet-latest")
+
+def chatbot(state: State):
+    return {"messages": [llm.invoke(state["messages"])]}
+
+graph_builder.add_node("chatbot", chatbot)
+```
+
+### 4. Definir as Arestas
+
+As arestas conectam os nós. `START` e `END` são nós especiais.
+
+```python
+from langgraph.graph import START, END
+
+graph_builder.add_edge(START, "chatbot")
+graph_builder.add_edge("chatbot", END)
+```
+
+### 5. Compilar o Grafo
+
+Finalmente, compile o grafo para torná-lo executável.
+
+```python
+graph = graph_builder.compile()
+```
+
+## Visualizando o Grafo
+
+Você pode visualizar a estrutura do seu grafo usando a biblioteca `IPython`.
+
+```python
+from IPython.display import Image, display
+
+try:
+    display(Image(graph.get_graph().draw_mermaid_png()))
+except Exception:
+    # Requer dependências extras e é opcional
+    pass

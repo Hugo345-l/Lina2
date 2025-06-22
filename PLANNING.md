@@ -172,6 +172,8 @@ def routing_decision(intent: Dict) -> str:
 ### **Objetivo**
 Implementar ferramentas básicas que demonstram capacidades de cada instância.
 
+> **Nota sobre Implantação de MCPs:** O desenvolvimento inicial dos MCPs pode ser feito localmente para agilizar os testes e a prototipagem. No entanto, a arquitetura final deve prever a execução de cada servidor MCP dentro de um **contêiner Docker**. Esta abordagem garante **isolamento, segurança, portabilidade e consistência** entre os ambientes de desenvolvimento e produção, sendo uma prática recomendada para sistemas de IA modulares. A transição para Docker será um passo crucial antes de considerar o sistema robusto.
+
 ### **Tarefa 2.1: MCP Sistema de Arquivos**
 
 #### **Funcionalidades**

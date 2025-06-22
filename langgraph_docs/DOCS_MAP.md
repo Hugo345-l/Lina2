@@ -1,23 +1,23 @@
-# Mapa da Documentação - LangGraph
+# Mapa da Documentação do LangGraph
 
-Este arquivo serve como um índice central para toda a documentação do `langgraph` salva neste repositório. Cada tópico principal terá seu próprio arquivo Markdown para facilitar a consulta.
+Este diretório contém a documentação e as notas de estudo sobre o LangGraph, coletadas para apoiar o desenvolvimento do Projeto Lina v2.0.
 
-## Tópicos
+## Documentos
 
-1.  **[Introdução e Primeiros Passos](./01_getting_started.md)**
-    -   Instalação, conceitos fundamentais (`StateGraph`, Nós, Arestas) e um exemplo básico.
+1.  **[01 - Guia de Início Rápido](./01_getting_started.md)**
+    -   Instalação, criação de agentes ReAct simples e definição de fluxos de trabalho básicos.
 
-2.  **[Uso de Ferramentas (Tool Using)](./02_tool_using.md)**
-    -   Como definir, vincular e executar ferramentas em um agente `langgraph`.
+2.  **[02 - Uso de Ferramentas](./02_tool_using.md)**
+    -   Como definir, vincular e usar ferramentas com o `ToolNode`.
 
-3.  **[Intervenção Humana (Human-in-the-Loop)](./03_human_in_the_loop.md)**
-    -   Como pausar o grafo para obter aprovação ou entrada de um humano usando `interrupt`.
+3.  **[03 - Intervenção Humana](./03_human_in_the_loop.md)**
+    -   Usando `interrupt` e `Command` para pausar e retomar grafos para validação humana.
 
-4.  **[Agentes Pré-construídos (`prebuilt`)](./04_prebuilt_agents.md)**
-    -   Utilizando `create_react_agent` para criar agentes ReAct de forma rápida.
+4.  **[04 - Agentes Pré-Construídos](./04_prebuilt_agents.md)**
+    -   Visão geral do `create_react_agent` e suas opções de customização.
 
-5.  **[Sistemas Multi-Agente](./05_multi_agent_systems.md)**
-    -   Orquestrando múltiplos agentes com as arquiteturas Supervisor e Swarm.
+5.  **[05 - Sistemas Multi-Agente](./05_multi_agent_systems.md)**
+    -   Padrões para orquestrar múltiplos agentes, como o padrão Supervisor e Swarm.
 
-6.  **[Guia Completo do LangGraph Studio](./06_langgraph_studio.md)**
-    -   Tutorial de setup no Windows e guia de funcionalidades para depuração visual de agentes.
+6.  **[06 - LangGraph Studio](./06_langgraph_studio.md)**
+    -   Visão geral do aplicativo de desktop para depuração e visualização de grafos.

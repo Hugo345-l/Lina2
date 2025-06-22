@@ -1,85 +1,88 @@
-# 3. Intervenção Humana (Human-in-the-Loop)
+# Intervenção Humana (Human-in-the-Loop)
 
-O `langgraph` se destaca na criação de fluxos de trabalho que podem ser pausados para aguardar a entrada, revisão ou aprovação de um humano. Isso é essencial para tarefas sensíveis, depuração ou quando o agente precisa de orientação.
+O LangGraph fornece primitivas poderosas para pausar a execução de um grafo e solicitar a intervenção humana. Isso é essencial para tarefas que exigem validação, edição ou feedback.
 
-## Como Funciona a Intervenção Humana
+## As Primitivas: `interrupt` e `Command`
 
-O mecanismo principal é a função `interrupt()` da `langgraph.types`.
+-   **`interrupt(payload)`**: Pausa a execução do grafo no nó atual e retorna um objeto `Interrupt` para o cliente. O `payload` pode ser qualquer valor serializável em JSON que você queira expor ao humano.
+-   **`Command(resume=...)`**: É usado para retomar um grafo pausado. O valor passado para `resume` é o que a chamada `interrupt` retornará dentro do grafo.
 
-1.  **Pausando o Grafo (`interrupt`)**: Quando um nó chama `interrupt()`, a execução do grafo é pausada. A função pode passar qualquer dado serializável (como um dicionário com uma pergunta) para a interface do usuário ou para o cliente que está executando o grafo.
-2.  **Persistência de Estado**: Para que a interrupção funcione, o grafo **precisa** ser compilado com um "checkpointer" (como `MemorySaver`). O checkpointer salva o estado do grafo no momento da interrupção, permitindo que ele seja retomado mais tarde.
-3.  **Retomando o Grafo (`Command`)**: O cliente que invocou o grafo pode retomá-lo enviando um objeto `Command(resume=...)`. O valor passado no `resume` é o que a função `interrupt()` retornará dentro do nó, permitindo que o fluxo continue com a entrada humana.
+## Exemplo: Pausando para Edição
 
-## Exemplo: Ferramenta com Aprovação Humana
-
-Vamos criar uma ferramenta "sensível" que reserva um hotel, mas só completa a ação após a aprovação de um humano.
+Este exemplo mostra como pausar o grafo para que um humano possa revisar e editar um resumo gerado por LLM.
 
 ```python
+from typing import TypedDict
 import uuid
-from typing import TypedDict, Annotated
-from langgraph.graph import StateGraph, START, END
-from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, tools_condition, create_react_agent
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.constants import START, END
+from langgraph.graph import StateGraph
 from langgraph.types import interrupt, Command
-from langchain_core.tools import tool
-from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 
-# 1. Defina a ferramenta que precisa de aprovação
-@tool
-def book_hotel(hotel_name: str, days: int) -> str:
-    """Reserva um hotel para um número específico de dias."""
-    # Pausa a execução e espera pela entrada humana
-    response = interrupt(
-        f"Tentando reservar o hotel '{hotel_name}' por {days} dias. "
-        "Por favor, aprove (approve), edite (edit) ou rejeite (reject)."
-    )
+# 1. Definir o Estado
+class State(TypedDict):
+    summary: str
 
-    # Lógica para lidar com a resposta humana
-    if response == "approve":
-        # Lógica de reserva real iria aqui
-        return f"Reserva no hotel '{hotel_name}' por {days} dias confirmada."
-    elif isinstance(response, dict) and response.get("type") == "edit":
-        new_hotel = response["args"]["hotel_name"]
-        new_days = response["args"]["days"]
-        return f"Reserva alterada e confirmada para '{new_hotel}' por {new_days} dias."
-    else:
-        return "Reserva cancelada pelo usuário."
+# 2. Definir os Nós
+def generate_summary(state: State) -> State:
+    return {"summary": "O gato sentou no tapete e olhou para as estrelas."}
 
-# 2. Crie o agente com um checkpointer
-# O checkpointer é OBRIGATÓRIO para o interrupt funcionar
-checkpointer = InMemorySaver()
+def human_review_edit(state: State) -> State:
+    # Pausa o grafo e espera pela entrada humana
+    result = interrupt({
+        "task": "Por favor, revise e edite o resumo gerado, se necessário.",
+        "generated_summary": state["summary"]
+    })
+    # Atualiza o estado com o texto editado
+    return {"summary": result["edited_summary"]}
 
-agent = create_react_agent(
-    model=ChatOpenAI(model="gpt-4o-mini"),
-    tools=[book_hotel],
-    checkpointer=checkpointer, # Vincula o checkpointer ao agente
+def downstream_use(state: State) -> State:
+    print(f"✅ Usando o resumo editado: {state['summary']}")
+    return state
+
+# 3. Construir o Grafo
+builder = StateGraph(State)
+builder.add_node("generate_summary", generate_summary)
+builder.add_node("human_review_edit", human_review_edit)
+builder.add_node("downstream_use", downstream_use)
+
+builder.set_entry_point("generate_summary")
+builder.add_edge("generate_summary", "human_review_edit")
+builder.add_edge("human_review_edit", "downstream_use")
+builder.add_edge("downstream_use", END)
+
+# 4. Compilar com um Checkpointer
+# A interrupção requer um checkpointer para salvar o estado do grafo.
+checkpointer = MemorySaver()
+graph = builder.compile(checkpointer=checkpointer)
+
+# 5. Executar o Grafo
+config = {"configurable": {"thread_id": uuid.uuid4()}}
+result = graph.invoke({}, config=config)
+
+# O `result` conterá a chave especial `__interrupt__`
+print(result["__interrupt__"])
+
+# 6. Retomar o Grafo
+edited_summary = "O gato deitou no tapete, olhando pacificamente para o céu noturno."
+resumed_result = graph.invoke(
+    Command(resume={"edited_summary": edited_summary}),
+    config=config
 )
-
-# 3. Execute o grafo e lide com a interrupção
-# O 'thread_id' é crucial para manter o estado da conversa
-config = {"configurable": {"thread_id": str(uuid.uuid4())}}
-
-# Primeira chamada: o agente vai parar na ferramenta
-initial_query = {"messages": [("user", "reserve o Grand Hotel por 3 dias")]}
-for chunk in agent.stream(initial_query, config):
-    print(chunk)
-    print("----")
-
-# Neste ponto, a execução está pausada.
-# O cliente (ou você, no terminal) pode inspecionar o estado e decidir o que fazer.
-
-# Segunda chamada: retomando com a aprovação humana
-# Para testar, você pode mudar para "reject" ou um dicionário de edição
-human_input = "approve"
-for chunk in agent.stream(Command(resume=human_input), config):
-    print(chunk)
-    print("----")
+print(resumed_result)
 ```
 
-### Pontos Chave do Exemplo:
+## Roteamento Baseado na Entrada Humana
 
--   **`interrupt()`**: Pausa o fluxo e envia uma mensagem para o cliente.
--   **`InMemorySaver()`**: Um checkpointer simples que salva o estado do grafo em memória. Para produção, você usaria opções mais robustas como `SqliteSaver`.
--   **`thread_id`**: Essencial para que o `langgraph` saiba qual estado de conversa pausado deve ser retomado.
--   **`Command(resume=...)`**: O objeto usado para injetar a resposta humana de volta no grafo e continuar a execução.
+Você pode usar `Command(goto="...")` para rotear a execução para diferentes nós com base na decisão do humano.
+
+```python
+from typing import Literal
+
+def human_approval(state: State) -> Command[Literal["approved_path", "rejected_path"]]:
+    decision = interrupt(...)
+
+    if decision == "approve":
+        return Command(goto="approved_path", update={"decision": "approved"})
+    else:
+        return Command(goto="rejected_path", update={"decision": "rejected"})
