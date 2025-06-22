@@ -10,19 +10,115 @@
 
 ---
 
+## ⚙️ **FASE SETUP: Configuração do Ambiente LangGraph Studio** (1 dia)
+
+### **Objetivo**
+Configurar e validar o ambiente de desenvolvimento com LangGraph CLI e Studio antes de iniciar a implementação.
+
+### **Tarefa SETUP.1: Instalação e Configuração Base**
+
+#### **Instalação do LangGraph CLI**
+- [x] Instalar LangGraph CLI com suporte in-memory:
+  ```bash
+  pip install "langgraph-cli[inmem]>=0.1.55"
+  ```
+- [x] Verificar instalação:
+  ```bash
+  langgraph --help
+  ```
+- [x] Configurar conta LangSmith (necessária para LangGraph Studio):
+  - [x] Criar conta em https://smith.langchain.com
+  - [x] Gerar API key no LangSmith
+  - [x] Configurar variável de ambiente `LANGSMITH_API_KEY`
+
+#### **Configuração do Projeto Teste**
+- [x] Criar estrutura mínima de projeto:
+  ```
+  lina-setup-test/
+  ├── simple_agent.py
+  ├── langgraph.json
+  ├── requirements.txt
+  └── .env
+  ```
+- [x] Implementar grafo mínimo funcional em `simple_agent.py`:
+  - [x] Estado simples com mensagens
+  - [x] Nó único que responde "Hello from LangGraph!"
+  - [x] Compilação do grafo
+- [x] Criar `langgraph.json` básico:
+  ```json
+  {
+    "dependencies": ["."],
+    "graphs": {
+      "test_agent": "./simple_agent.py:graph"
+    },
+    "env": ".env"
+  }
+  ```
+- [x] Configurar `.env` com:
+  ```
+  LANGSMITH_API_KEY=sua_api_key_aqui
+  ```
+
+### **Tarefa SETUP.2: Validação do LangGraph Studio**
+
+#### **Teste do Servidor Local**
+- [x] Executar servidor de desenvolvimento com `langgraph dev`.
+- [x] Executar servidor de desenvolvimento com `langgraph up` (usando Docker).
+- [x] Verificar se ambos os servidores iniciam corretamente.
+- [x] Confirmar que o grafo é carregado sem erros em ambas as abordagens.
+
+#### **Teste do LangGraph Studio Web**
+- [x] Acessar LangGraph Studio e conectar aos servidores locais.
+- [x] Fazer login com conta LangSmith.
+- [x] Verificar se o grafo aparece na interface.
+- [x] Testar execução do grafo.
+
+### **Tarefa SETUP.3: Exploração das Funcionalidades**
+
+#### **Teste de Funcionalidades Core**
+- [x] **Visualização**: Confirmado que o grafo aparece visualmente.
+- [x] **Execução**: Confirmado, com inputs de teste e verificação de outputs.
+- [x] **Debug**: Funcionalidades de interrupção e passo-a-passo validadas.
+- [x] **Estado**: Inspeção de estado entre nós validada.
+- [x] **Threading**: Criação e alternância entre threads validada.
+- [x] **Configuração**: Edição de configurações validada.
+
+### **Tarefa SETUP.4: Documentação e Preparação**
+
+#### **Documentação dos Achados**
+- [x] Criar `SETUP_NOTES.md` documentando:
+  - [x] Processo de instalação e configuração
+  - [x] Estrutura mínima necessária do projeto
+  - [x] Funcionalidades disponíveis no Studio
+  - [x] Limitações identificadas
+  - [x] Diferenças entre `langgraph dev` vs `langgraph up`
+  - [x] Best practices para desenvolvimento
+
+### **Critérios de Sucesso**
+- [x] LangGraph CLI instalado e funcionando.
+- [x] Servidor local (`dev` e `up`) iniciando sem erros.
+- [x] LangGraph Studio acessível e funcional.
+- [x] Grafo de teste executando corretamente.
+- [x] Todas as funcionalidades core validadivas.
+- [x] Documentação completa do setup.
+- [x] Ambiente pronto para desenvolvimento do projeto principal.
+
+
+---
+
 ## 🎯 **FASE 0: Preparação e Aprendizado** (2-3 dias)
 
 ### **Objetivo**
 Entender profundamente LangGraph e validar conceitos antes de implementar.
 
 ### **Tarefa 0.1: Estudo Dirigido do LangGraph**
-- [ ] Estudar exemplos oficiais:
-  - [ ] [Multi-agent supervisor pattern](https://github.com/langchain-ai/langgraph/tree/main/examples/multi_agent)
-  - [ ] [ReAct agent implementation](https://github.com/langchain-ai/langgraph/tree/main/examples/react)
-  - [ ] [Human-in-the-loop patterns](https://github.com/langchain-ai/langgraph/tree/main/examples/human_in_the_loop)
-- [ ] Entender sistema de checkpoints e recuperação de estado
-- [ ] Explorar capacidades do LangGraph Studio
-- [ ] Documentar insights e padrões úteis
+- [x] Estudar exemplos oficiais:
+  - [x] [Multi-agent supervisor pattern](https://github.com/langchain-ai/langgraph/tree/main/examples/multi_agent)
+  - [x] [ReAct agent implementation](https://github.com/langchain-ai/langgraph/tree/main/examples/react)
+  - [x] [Human-in-the-loop patterns](https://github.com/langchain-ai/langgraph/tree/main/examples/human_in_the_loop)
+- [x] Entender sistema de checkpoints e recuperação de estado
+- [x] Explorar capacidades do LangGraph Studio
+- [x] Documentar insights e padrões úteis
 
 ### **Tarefa 0.2: Prototipagem Conceitual**
 - [ ] Criar `experiments/grafo_conceitual.py` com:
@@ -35,11 +131,6 @@ Entender profundamente LangGraph e validar conceitos antes de implementar.
   - [ ] Inspeção de estados
   - [ ] Timeline de execução
 - [ ] Documentar aprendizados em `experiments/LEARNINGS.md`
-
-### **Critérios de Sucesso**
-- [ ] Compreensão clara de como implementar multi-agent no LangGraph
-- [ ] Protótipo funcional demonstrando conceitos core
-- [ ] Validação de que LangGraph Studio atende necessidades de debug
 
 ---
 
@@ -346,6 +437,7 @@ Criar interface específica para necessidades além do LangGraph Studio.
 
 ## 📅 **Timeline Estimada**
 
+- **Dia 1**: Fase SETUP completa
 - **Semana 1**: Fase 0 + Início Fase 1
 - **Semana 2**: Conclusão Fase 1 + Início Fase 2
 - **Semana 3**: Conclusão Fase 2

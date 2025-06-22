@@ -11,7 +11,7 @@ __pycache__/
 .env
 .env.*
 !.env.example
-# .env.keys
+.env.keys
 
 # Arquivos de IDE e sistema operacional
 .vscode/
